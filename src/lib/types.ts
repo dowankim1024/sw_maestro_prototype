@@ -130,11 +130,24 @@ export interface TrendIssue {
   sources: IssueSource[];
   /** 항상 2개의 시각. 단어는 중립적. */
   perspectives: [Perspective, Perspective];
+  /** 대화에서 다룰 수 있는 핵심 포인트 3개 (issue.md 가이드 기준) */
+  keyPoints: string[];
+  /** 사용자가 캐릭터에게 던질 만한 진입 질문 3개 (얕음 → 깊음) */
+  conversationStarters: string[];
 }
 
 // === 캐릭터 ===
 export type CharacterId = "kkang" | "uncle" | "prof" | "pm";
-export type CharacterTone = "직설_공감" | "생활밀착" | "학술" | "정책";
+/**
+ * 페르소나 매칭 톤. prompt/character_*.md 의 비교표 기준.
+ * - 가벼움 (Light): 깡깡녀
+ * - 친근함 (Friendly): 옆집 아재
+ * - 깊이 (Depth): 교수님
+ * - 스마트 (Smart): MZ 인턴
+ *
+ * 주의: 캐릭터 id 'pm'은 호환성 위해 유지하지만 의미는 'MZ 인턴'으로 재정의됨.
+ */
+export type CharacterTone = "가벼움" | "친근함" | "깊이" | "스마트";
 
 export interface Character {
   id: CharacterId;
@@ -161,6 +174,13 @@ export interface ChatTurn {
   mood?: Mood;
   /** 이번 턴에서 인사이트로 잡힌 한 줄 (선택) */
   capturedFact?: string;
+  /**
+   * LLM 호출이 실패해 폴백 응답이 사용된 경우.
+   * UI 에서 "지금 잠깐 혼잡해서 임시 답변이에요" 안내를 표시한다.
+   */
+  degraded?: boolean;
+  /** 폴백 사유 코드 (예: 'request_failed' | 'incomplete_response' | 'network_error'). 디버그용. */
+  degradedReason?: string;
   createdAt: string;
 }
 
@@ -171,16 +191,39 @@ export interface ChatSession {
   startedAt: string;
 }
 
+/** 04-prototype 카드 스키마의 한 항목 */
+export interface KeyTakeaway {
+  concept: string;
+  explanation: string;
+}
+
 export interface ChatInsight {
   id: string;
   issueId: string;
   issueTitle: string;
   characterId: CharacterId;
   characterName: string;
+
+  // === 04-prototype 카드 스키마 (LLM 생성) ===
+  /** 카드 헤드라인. 30자 이내, 학습 성취감 톤 */
+  headline?: string;
+  /** 핵심 3가지 (개념 + 짧은 설명) */
+  keyTakeaways?: KeyTakeaway[];
+  /** 사용자가 대화 중 보여준 좋은 관찰·질문 한 문장 */
+  userInsight?: string;
+  /** 다음에 더 알면 재밌을 지점 한 문장 */
+  nextCuriosity?: string;
+  /** SNS 공유용 캐릭터 톤 한 줄 */
+  shareableQuote?: string;
+  /** 대화 시간 또는 턴 수 */
+  duration?: string;
+
+  // === 기존 카드 (LLM 실패 시 폴백 + 보조 표시) ===
   newlyLearned: string[]; // 2~3
   alreadyKnew: string[]; // 1~2
   wantToExplore: string[]; // 1~2
   characterClosing: string;
+
   /** 내부 사용용 (히스토리 다시 보기) */
   turns: ChatTurn[];
   createdAt: string;

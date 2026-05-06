@@ -103,28 +103,32 @@ export function startChat(input: {
 }
 
 function openingLine(issue: TrendIssue, character: Character): string {
+  const oneLineNoTail = issue.oneLine.replace(/[?.!]+$/, "");
   switch (character.id) {
     case "kkang":
       return [
-        `오, 이거 봤어? "${issue.title}"`,
-        `솔직히 첫 인상은 ${issue.oneLine.replace(/[?.!]+$/, "")} 라는 거지.`,
-        `너는 어느 쪽이야? 그냥 편하게 던져봐.`,
+        `어 이거~ "${issue.title}"`,
+        `요즘 SNS에 ${oneLineNoTail} 라는 얘기 진짜 많더라 ㅋㅋ`,
+        `너는 이거 어떻게 들었어?? 편하게 던져봐~`,
       ].join(" ");
     case "uncle":
       return [
-        `이 얘기 한 번 같이 보자고. ${issue.oneLine}`,
-        `우리 회사도 비슷한 거 있었는데, 그 전에 자네는 어떻게 느꼈어?`,
+        `아~ 그거 말이야~ "${issue.title}".`,
+        `단톡방에서도 다들 그 얘기더라고~ ${issue.oneLine}`,
+        `자네는 이 얘기 어디서 처음 들었어?`,
       ].join(" ");
     case "prof":
       return [
-        `오늘 같이 살펴볼 주제는 «${issue.title}»입니다. 한 줄로 정리하면, ${issue.oneLine}`,
-        `먼저, 이 주제에 대해 본인이 알고 있는 한 가지를 자유롭게 말씀해주실까요? 평가는 하지 않습니다.`,
+        `음... 오늘 같이 살펴볼 주제는 "${issue.title}" 인데요...`,
+        `한 줄로 정리하면 ${oneLineNoTail} 정도예요.`,
+        `이 주제에서 가장 먼저 걸리는 부분이 어디인지 자유롭게 말씀해 주실래요?`,
       ].join(" ");
     case "pm":
     default:
       return [
-        `이번 사안은 ‘${issue.title}’입니다. ${issue.oneLine}`,
-        `먼저 시민의 시각에서 어떻게 받아들이시는지 듣고 싶습니다. 정책 결정 전에 가장 중요한 단계입니다.`,
+        `어... "${issue.title}" 이거 보시는 거죠? ㅋㅋ`,
+        `트위터·레딧에서도 ${oneLineNoTail} 분위기로 도는 거 같더라고요.`,
+        `어디부터 궁금하신지 던져주시면 같이 정리해볼게요.`,
       ].join(" ");
   }
 }
@@ -143,7 +147,15 @@ export async function generateCharacterReply(args: {
   characterId: CharacterId;
   userText: string;
   history: ChatTurn[];
-}): Promise<{ mood: Mood; text: string; capturedFact?: string }> {
+}): Promise<{
+  mood: Mood;
+  text: string;
+  capturedFact?: string;
+  /** LLM 호출이 실패해 폴백/임시 답변이 쓰인 경우 true. */
+  degraded?: boolean;
+  /** 폴백 사유 (예: 'request_failed', 'incomplete_response', 'network_error'). */
+  degradedReason?: string;
+}> {
   const { issue, characterId, userText, history } = args;
   const character = getCharacter(characterId);
 
@@ -195,17 +207,33 @@ export async function generateCharacterReply(args: {
     });
 
     if (response.ok) {
-      const data = (await response.json()) as { text?: string };
+      const data = (await response.json()) as {
+        text?: string;
+        degraded?: boolean;
+        reason?: string;
+      };
       const text = data.text?.trim();
       if (text) {
-        return { mood, text, capturedFact };
+        return {
+          mood,
+          text,
+          capturedFact,
+          degraded: data.degraded,
+          degradedReason: data.reason,
+        };
       }
     }
   } catch {
     // 네트워크/서버 오류 시 로컬 mock 응답으로 폴백
   }
 
-  return { mood, text: fallbackText, capturedFact };
+  return {
+    mood,
+    text: fallbackText,
+    capturedFact,
+    degraded: true,
+    degradedReason: "network_error",
+  };
 }
 
 function composeReply(args: {
@@ -286,23 +314,23 @@ function composeReply(args: {
       if (mood === "공감") {
         return [
           isFirstResponse
-            ? "시민의 그 체감, 정책의 출발점입니다."
-            : "그 감각, 행정도 같은 결로 우려하고 있습니다.",
-          `다만 정책적으로 보면 ${lensPoint} 같은 면도 함께 따집니다.`,
-          "여기에 대한 본인의 우선순위는 어떻게 되시는지요?",
+            ? "어 그 감각 ㄹㅇ이에요."
+            : "ㅇㅇ 그거 저도 비슷하게 봤어요.",
+          `근데 한 발 떨어져서 보면 ${lensPoint} 이런 결도 같이 도는 얘기더라고요.`,
+          "이 부분은 어떻게 들리세요?",
         ].join(" ");
       }
       if (mood === "시각공유") {
         return [
-          "시민의 시각, 잘 들었습니다.",
-          `정책 책임자 입장에서는 ${lensPoint} 라는 결도 함께 검토합니다.`,
-          "이 결을 어떻게 보시는지요?",
+          "어... 그렇게 보실 수도 있긴 해요.",
+          `근데 트위터·레딧 보면 ${lensPoint} 이런 결도 꽤 도더라고요. 평가는 아니고 그냥 다른 패턴이에요.`,
+          "이쪽 결은 어떻게 느껴지세요?",
         ].join(" ");
       }
       return [
-        "한 가지 더 짚고 가도 될까요.",
-        `${lensPoint} — 이런 면도 결정에 영향을 미칩니다.`,
-        "어떻게 느끼시는지요?",
+        "어 그건 좀 헷갈리실 수 있는데요.",
+        `결국 ${lensPoint} 이게 핵심에 가까워요.`,
+        "이 정도 보정해두면 다음 얘기 풀기 쉬울 거 같아요.",
       ].join(" ");
   }
 }
@@ -315,14 +343,14 @@ function pickAnecdote(issue: TrendIssue): string {
 function deescalate(character: Character): string {
   switch (character.id) {
     case "kkang":
-      return "워, 잠깐. 욕은 빼고 가자. 네 결은 이해했고, 그래서 진짜 짚고 싶은 거 한 줄로 다시 말해봐. 같이 갈게.";
+      return "야 잠깐 ㅠㅠ 욕은 좀 빼고~ 네 결은 알겠는데 진짜 짚고 싶은 거 한 줄로 다시 말해봐~ 같이 갈게 ㅋㅋ";
     case "uncle":
-      return "감정 좀 가라앉히고 다시 가자, 응? 자네가 진짜 힘들었던 포인트가 어디였어?";
+      return "어어 잠깐~ 흥분 좀 내려놓고 가자고~ 자네가 진짜 답답했던 포인트가 어디였어?";
     case "prof":
-      return "표현은 잠시 내려두시고, 가장 마음에 걸리는 지점 한 가지만 정리해주실래요? 함께 짚어볼게요.";
+      return "음... 표현은 잠시 내려두시고요... 가장 마음에 걸리는 지점 하나만 정리해 주시겠어요?";
     case "pm":
     default:
-      return "표현은 절제하고 가시지요. 본인이 가장 우선순위로 느끼는 부분이 무엇인지 한 줄로 들려주시면 좋겠습니다.";
+      return "어... 일단 한 발 떨어져서 보시죠 ㅋㅋ 가장 답답한 포인트 하나만 짧게 던져주시면 같이 정리해볼게요.";
   }
 }
 
@@ -344,32 +372,77 @@ export function quickReactionToText(qr: QuickReaction): string {
 
 /**
  * 대화 종료 시 인사이트 카드 생성.
- * 점수·우열 없음. ‘오늘 새로 본 것’ 형태.
- *
- * LLM 연결 시:
- *   const res = await fetch("/api/chat/insight", { method: "POST", body: JSON.stringify({ issue, characterId, turns }) });
+ * 1순위: /api/chat/insight 라우트 호출 (Gemini가 04-prototype 카드 스키마로 생성)
+ * 2순위: 실패 시 로컬 휴리스틱으로 폴백 ('오늘 새로 본 것' 형태)
  */
-export function buildInsight(args: {
+export async function buildInsight(args: {
   issue: TrendIssue;
   characterId: CharacterId;
   turns: ChatTurn[];
-}): ChatInsight {
+}): Promise<ChatInsight> {
   const { issue, characterId, turns } = args;
   const character = getCharacter(characterId);
 
-  // 자동 캡처된 사실 + 캐릭터 발화에서 끌어온 디테일
+  const local = buildLocalInsight(issue, characterId, turns);
+
+  try {
+    const response = await fetch("/api/chat/insight", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ issue, characterId, turns }),
+    });
+    if (response.ok) {
+      const data = (await response.json()) as {
+        card?: {
+          issueTitle: string;
+          personaName: string;
+          headline: string;
+          keyTakeaways: { concept: string; explanation: string }[];
+          userInsight: string;
+          nextCuriosity: string;
+          shareableQuote: string;
+          duration: string;
+        };
+      };
+      const card = data.card;
+      if (card) {
+        return {
+          ...local,
+          headline: card.headline,
+          keyTakeaways: card.keyTakeaways,
+          userInsight: card.userInsight,
+          nextCuriosity: card.nextCuriosity,
+          shareableQuote: card.shareableQuote,
+          duration: card.duration,
+          issueTitle: card.issueTitle ?? local.issueTitle,
+          characterName: card.personaName ?? character.name,
+        };
+      }
+    }
+  } catch {
+    // ignore — 로컬 폴백 사용
+  }
+
+  return local;
+}
+
+function buildLocalInsight(
+  issue: TrendIssue,
+  characterId: CharacterId,
+  turns: ChatTurn[],
+): ChatInsight {
+  const character = getCharacter(characterId);
+
   const captured = turns
     .map((t) => t.capturedFact)
     .filter((s): s is string => !!s);
 
-  // 사용자 발화 — 사용자가 ‘이미 알고 있던 것’ 으로 분류
   const userTurns = turns.filter((t) => t.role === "user");
   const alreadyKnew = userTurns
     .map((t) => firstSentence(t.text))
     .filter(Boolean)
     .slice(0, 2);
 
-  // 캐릭터가 시각으로 던졌던 ‘다른 결’ → 새로 본 것
   const lensPoints = turns
     .filter((t) => t.role === "character" && t.mood !== "공감")
     .map((t) => firstSentence(t.text))
@@ -412,14 +485,14 @@ export function buildInsight(args: {
 function closingLine(character: Character): string {
   switch (character.id) {
     case "kkang":
-      return "오늘 얘기 좋았어. 또 던질 거 생기면 들고 와.";
+      return "아 오늘 얘기 진짜 좋았다 ㅋㅋ 또 궁금한 거 생기면 들고 와~";
     case "uncle":
-      return "재밌었어, 자네. 다음에 또 한 잔 하면서 보자고.";
+      return "재밌었어 자네~ 다음에 또 한 잔 하면서 보자고~";
     case "prof":
-      return "오늘 함께 짚어주셔서 감사합니다. 좋은 호기심이세요.";
+      return "오늘 함께 짚어주셔서 감사해요... 좋은 호기심이셨어요.";
     case "pm":
     default:
-      return "시간 내주셔서 감사합니다. 시민의 시각, 정책 결정에 큰 도움이 됩니다.";
+      return "어 오늘 얘기 좋았어요 ㅋㅋ 또 궁금한 거 도는 키워드 있으면 던져주세요.";
   }
 }
 

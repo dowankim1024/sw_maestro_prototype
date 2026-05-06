@@ -133,6 +133,42 @@ function DetailContent({
         </p>
       </Section>
 
+      {issue.keyPoints && issue.keyPoints.length > 0 && (
+        <Section title="핵심 포인트 3가지">
+          <ul className="space-y-1.5 text-sm leading-relaxed text-white/85">
+            {issue.keyPoints.map((p, i) => (
+              <li key={i} className="flex gap-2">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-white/70" />
+                <span>{p}</span>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {issue.conversationStarters && issue.conversationStarters.length > 0 && (
+        <Section title="이렇게 던져보면 좋아요">
+          <div className="flex flex-col gap-2">
+            {issue.conversationStarters.map((q, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onStartChat(issue)}
+                className="rounded-xl border border-[var(--border)] bg-white/5 px-3 py-2 text-left text-sm text-white/90 transition hover:border-white/20 hover:bg-white/10"
+              >
+                <span className="mr-1.5 text-[11px] text-[var(--muted)]">
+                  Q{i + 1}
+                </span>
+                {q}
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--muted)]">
+            캐릭터를 고르고 위 질문 그대로 던져도 됩니다.
+          </p>
+        </Section>
+      )}
+
       <Section title="시각 두 갈래">
         <div className="grid gap-3 sm:grid-cols-2">
           <PerspectiveCard

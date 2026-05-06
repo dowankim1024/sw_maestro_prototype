@@ -40,6 +40,7 @@ export function ChatRoom({
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [ended, setEnded] = useState(false);
+  const [lastUserText, setLastUserText] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function ChatRoom({
     const next = [...turns, userTurn];
     setTurns(next);
     setInput("");
+    setLastUserText(trimmed);
     setTyping(true);
 
     const reply = await generateCharacterReply({
@@ -78,6 +80,49 @@ export function ChatRoom({
         mood: reply.mood,
         text: reply.text,
         capturedFact: reply.capturedFact,
+        degraded: reply.degraded,
+        degradedReason: reply.degradedReason,
+        createdAt: new Date().toISOString(),
+      };
+      setTurns((prev) => [...prev, charTurn]);
+      setTyping(false);
+    }, typingMs);
+  }
+
+  /**
+   * 마지막 사용자 발언을 그대로 다시 보낸다 (degraded 응답 재시도용).
+   * 이미 추가된 사용자 턴은 두고, 직전 캐릭터 폴백 턴만 제거한 뒤 재호출한다.
+   */
+  async function retryLastUserTurn() {
+    if (!lastUserText || typing || ended) return;
+    setTyping(true);
+
+    const trimmedHistory = (() => {
+      const last = turns[turns.length - 1];
+      if (last?.role === "character" && last.degraded) {
+        return turns.slice(0, -1);
+      }
+      return turns;
+    })();
+    setTurns(trimmedHistory);
+
+    const reply = await generateCharacterReply({
+      issue,
+      characterId,
+      userText: lastUserText,
+      history: trimmedHistory,
+    });
+
+    const typingMs = 400 + Math.min(1200, reply.text.length * 6);
+    window.setTimeout(() => {
+      const charTurn: ChatTurn = {
+        id: `c-retry-${Date.now()}`,
+        role: "character",
+        mood: reply.mood,
+        text: reply.text,
+        capturedFact: reply.capturedFact,
+        degraded: reply.degraded,
+        degradedReason: reply.degradedReason,
         createdAt: new Date().toISOString(),
       };
       setTurns((prev) => [...prev, charTurn]);
@@ -89,10 +134,10 @@ export function ChatRoom({
     send(quickReactionToText(qr));
   }
 
-  function handleEnd() {
+  async function handleEnd() {
     if (ended) return;
     setEnded(true);
-    const insight = buildInsight({
+    const insight = await buildInsight({
       issue,
       characterId,
       turns,
@@ -159,14 +204,46 @@ export function ChatRoom({
         ref={scrollRef}
         className="flex-1 space-y-4 overflow-y-auto p-3 sm:p-5"
       >
-        {turns.map((t) => (
-          <Bubble key={t.id} turn={t} character={character} />
-        ))}
+        {turns.map((t, idx) => {
+          const isLastCharTurn =
+            t.role === "character" && idx === turns.length - 1;
+          return (
+            <Bubble
+              key={t.id}
+              turn={t}
+              character={character}
+              onRetry={
+                isLastCharTurn && t.degraded && !typing && !ended
+                  ? retryLastUserTurn
+                  : undefined
+              }
+            />
+          );
+        })}
         {typing && <TypingBubble character={character} />}
       </div>
 
       {/* 퀵 리액션 + 입력 */}
       <div className="border-t border-[var(--border)] bg-[var(--background-elev)] p-3 sm:p-4">
+        {/* 사용자가 아직 입력 안 했으면 conversationStarters 추천 */}
+        {!turns.some((t) => t.role === "user") &&
+          issue.conversationStarters &&
+          issue.conversationStarters.length > 0 && (
+            <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {issue.conversationStarters.slice(0, 3).map((q, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => send(q)}
+                  disabled={typing || ended}
+                  className="shrink-0 rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] text-white/95 transition hover:border-[var(--accent)]/70 disabled:opacity-40"
+                >
+                  💬 {q}
+                </button>
+              ))}
+            </div>
+          )}
+
         <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
           {QUICK_REACTIONS.map((qr) => (
             <button
@@ -216,9 +293,12 @@ export function ChatRoom({
 function Bubble({
   turn,
   character,
+  onRetry,
 }: {
   turn: ChatTurn;
   character: Character;
+  /** 정의되어 있으면 degraded 안내 하단에 '다시 보내볼까?' 버튼 노출 */
+  onRetry?: () => void;
 }) {
   if (turn.role === "system") {
     return (
@@ -228,6 +308,7 @@ function Bubble({
     );
   }
   const isUser = turn.role === "user";
+  const showDegraded = !isUser && turn.degraded === true;
   return (
     <div
       className={`fade-up flex w-full ${isUser ? "justify-end" : "justify-start"}`}
@@ -246,7 +327,9 @@ function Bubble({
             "rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap",
             isUser
               ? "bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-white"
-              : "bg-white/5 border border-[var(--border)] text-white/90",
+              : showDegraded
+                ? "bg-white/5 border border-amber-400/30 text-white/90"
+                : "bg-white/5 border border-[var(--border)] text-white/90",
           ].join(" ")}
         >
           <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--muted)]">
@@ -254,6 +337,23 @@ function Bubble({
             {!isUser && turn.mood && <MoodTag mood={turn.mood} />}
           </div>
           <div>{turn.text}</div>
+          {showDegraded && (
+            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-amber-400/20 pt-2 text-[11px]">
+              <span className="inline-flex items-center gap-1 text-amber-200/90">
+                <span aria-hidden>⚠️</span>
+                <span>지금 잠깐 혼잡해서 임시 답변이에요.</span>
+              </span>
+              {onRetry && (
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[11px] font-medium text-amber-100 transition hover:border-amber-300/70 hover:bg-amber-400/20"
+                >
+                  다시 보내볼까?
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

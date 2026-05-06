@@ -66,6 +66,23 @@ export function ChatSetupModal({
             </p>
           </div>
 
+          {issue.conversationStarters &&
+            issue.conversationStarters.length > 0 && (
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--background-card)] p-3">
+                <div className="text-[11px] font-semibold uppercase tracking-widest text-[var(--muted)]">
+                  이렇게 던져보세요
+                </div>
+                <ul className="mt-2 space-y-1.5 text-[12px] leading-relaxed text-white/85">
+                  {issue.conversationStarters.slice(0, 3).map((q, i) => (
+                    <li key={i} className="flex gap-2">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-white/60" />
+                      <span>{q}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
           <p className="text-center text-[11px] text-[var(--muted)]">
             토론이 아니에요. 같이 짚어보는 5분짜리 대화예요.
           </p>
