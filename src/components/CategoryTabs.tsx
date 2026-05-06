@@ -18,7 +18,7 @@ export function CategoryTabs({
           const isActive = c === active;
           const meta = CATEGORY_META[c];
           const count = counts[c];
-          const isAge = c === "10대" || c === "20대";
+          const isAge = c === "20대" || c === "30대";
           return (
             <button
               key={c}

@@ -3,44 +3,34 @@
 import { useEffect, useMemo, useState } from "react";
 import { Brand } from "@/components/Brand";
 import { CategoryTabs } from "@/components/CategoryTabs";
-import { DebateRoom } from "@/components/DebateRoom";
-import { DebateSetupModal } from "@/components/DebateSetupModal";
+import { ChatRoom } from "@/components/ChatRoom";
+import { ChatSetupModal } from "@/components/ChatSetupModal";
 import { HistoryView } from "@/components/HistoryView";
 import { HotRisers } from "@/components/HotRisers";
+import { InsightView } from "@/components/InsightView";
 import { IssueCard } from "@/components/IssueCard";
 import { IssueDetailPanel } from "@/components/IssueDetailPanel";
 import { IssueStories } from "@/components/IssueStories";
-import { JudgmentReport } from "@/components/JudgmentReport";
-import { PERSONAS } from "@/lib/personas";
-// Note: PersonaPreview defined inline below uses PERSONAS directly.
+import { CHARACTERS } from "@/lib/characters";
 import { fetchTrends } from "@/lib/services";
 import {
-  deleteDebateHistory,
-  clearDebateHistory,
-  loadDebateHistory,
-  saveDebateHistory,
+  clearChatInsights,
+  deleteChatInsight,
+  loadChatInsights,
+  saveChatInsight,
 } from "@/lib/storage";
 import type {
   Category,
-  DebateResult,
-  Difficulty,
-  PersonaId,
+  CharacterId,
+  ChatInsight,
   TrendIssue,
-  UserStance,
 } from "@/lib/types";
 
 type View =
   | { kind: "dashboard" }
   | { kind: "history" }
-  | {
-      kind: "debate";
-      issue: TrendIssue;
-      stance: UserStance;
-      difficulty: Difficulty;
-      rounds: 3 | 5 | 7;
-      personaId: PersonaId;
-    }
-  | { kind: "report"; result: DebateResult };
+  | { kind: "chat"; issue: TrendIssue; characterId: CharacterId }
+  | { kind: "insight"; insight: ChatInsight };
 
 export default function HomePage() {
   const [issues, setIssues] = useState<TrendIssue[]>([]);
@@ -48,9 +38,9 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState<Category>("전체");
   const [selectedIssue, setSelectedIssue] = useState<TrendIssue | null>(null);
   const [setupIssue, setSetupIssue] = useState<TrendIssue | null>(null);
-  const [setupPersona, setSetupPersona] = useState<PersonaId>("sohn");
+  const [setupCharacter, setSetupCharacter] = useState<CharacterId>("kkang");
   const [view, setView] = useState<View>({ kind: "dashboard" });
-  const [history, setHistory] = useState<DebateResult[]>([]);
+  const [insights, setInsights] = useState<ChatInsight[]>([]);
   const [storiesOpen, setStoriesOpen] = useState(false);
 
   useEffect(() => {
@@ -61,7 +51,7 @@ export default function HomePage() {
       setIssues(data);
       setLoading(false);
     });
-    setHistory(loadDebateHistory());
+    setInsights(loadChatInsights());
     return () => {
       active = false;
     };
@@ -70,8 +60,8 @@ export default function HomePage() {
   const counts = useMemo(() => {
     const map: Partial<Record<Category, number>> = {
       전체: issues.length,
-      "10대": issues.filter((i) => i.targetAge.includes("10대")).length,
-      "20대": issues.filter((i) => i.targetAge.includes("20대")).length,
+      "20대": issues.filter((i) => i.audienceAge.includes("20대")).length,
+      "30대": issues.filter((i) => i.audienceAge.includes("30대")).length,
     };
     for (const i of issues) {
       map[i.category] = (map[i.category] ?? 0) + 1;
@@ -81,8 +71,8 @@ export default function HomePage() {
 
   const filtered = useMemo(() => {
     if (activeCategory === "전체") return issues;
-    if (activeCategory === "10대" || activeCategory === "20대") {
-      return issues.filter((i) => i.targetAge.includes(activeCategory));
+    if (activeCategory === "20대" || activeCategory === "30대") {
+      return issues.filter((i) => i.audienceAge.includes(activeCategory));
     }
     return issues.filter((i) => i.category === activeCategory);
   }, [activeCategory, issues]);
@@ -95,41 +85,28 @@ export default function HomePage() {
     [issues],
   );
 
-  function openSetup(issue: TrendIssue, persona?: PersonaId) {
+  function openSetup(issue: TrendIssue, characterId?: CharacterId) {
     setSetupIssue(issue);
-    if (persona) setSetupPersona(persona);
+    if (characterId) setSetupCharacter(characterId);
     setStoriesOpen(false);
   }
 
-  function startDebate(args: {
-    issue: TrendIssue;
-    userStance: UserStance;
-    difficulty: Difficulty;
-    totalRounds: 3 | 5 | 7;
-    personaId: PersonaId;
-  }) {
+  function startChat(args: { issue: TrendIssue; characterId: CharacterId }) {
     setSetupIssue(null);
-    setView({
-      kind: "debate",
-      issue: args.issue,
-      stance: args.userStance,
-      difficulty: args.difficulty,
-      rounds: args.totalRounds,
-      personaId: args.personaId,
-    });
+    setView({ kind: "chat", issue: args.issue, characterId: args.characterId });
   }
 
-  function handleFinishDebate(result: DebateResult) {
-    saveDebateHistory(result);
-    setHistory(loadDebateHistory());
-    setView({ kind: "report", result });
+  function handleFinishChat(insight: ChatInsight) {
+    saveChatInsight(insight);
+    setInsights(loadChatInsights());
+    setView({ kind: "insight", insight });
   }
 
   return (
     <div className="min-h-screen">
       <Header
         currentView={view.kind}
-        historyCount={history.length}
+        historyCount={insights.length}
         onHome={() => setView({ kind: "dashboard" })}
         onHistory={() => setView({ kind: "history" })}
       />
@@ -146,60 +123,68 @@ export default function HomePage() {
             onCategoryChange={setActiveCategory}
             selectedIssue={selectedIssue}
             onSelect={setSelectedIssue}
-            onStartDebate={(i, p) => openSetup(i, p)}
+            onStartChat={(i, c) => openSetup(i, c)}
             onOpenStories={() => setStoriesOpen(true)}
           />
         )}
 
         {view.kind === "history" && (
           <section className="space-y-4">
-            <h1 className="text-xl font-semibold text-white">내 토론 기록</h1>
+            <h1 className="text-xl font-semibold text-white">내 대화 책장</h1>
             <HistoryView
-              history={history}
-              onOpen={(r) => setView({ kind: "report", result: r })}
+              insights={insights}
+              onOpen={(i) => setView({ kind: "insight", insight: i })}
               onClear={() => {
-                clearDebateHistory();
-                setHistory([]);
+                clearChatInsights();
+                setInsights([]);
               }}
               onDelete={(id) => {
-                deleteDebateHistory(id);
-                setHistory(loadDebateHistory());
+                deleteChatInsight(id);
+                setInsights(loadChatInsights());
               }}
             />
           </section>
         )}
 
-        {view.kind === "debate" && (
-          <DebateRoom
+        {view.kind === "chat" && (
+          <ChatRoom
             issue={view.issue}
-            initialUserStance={view.stance}
-            initialDifficulty={view.difficulty}
-            initialRounds={view.rounds}
-            initialPersonaId={view.personaId}
+            characterId={view.characterId}
             onExit={() => setView({ kind: "dashboard" })}
-            onFinish={handleFinishDebate}
+            onFinish={handleFinishChat}
           />
         )}
 
-        {view.kind === "report" && (
-          <JudgmentReport
-            result={view.result}
+        {view.kind === "insight" && (
+          <InsightView
+            insight={view.insight}
             onHome={() => setView({ kind: "dashboard" })}
             onRetry={() => {
-              const issue = issues.find((i) => i.id === view.result.issueId);
-              if (issue) openSetup(issue, view.result.personaId);
+              const issue = issues.find((i) => i.id === view.insight.issueId);
+              if (issue) openSetup(issue, view.insight.characterId);
               setView({ kind: "dashboard" });
+            }}
+            onAnother={() => {
+              const issue = issues.find((i) => i.id === view.insight.issueId);
+              if (issue) {
+                // 다른 캐릭터 자동 추천
+                const others = CHARACTERS.filter(
+                  (c) => c.id !== view.insight.characterId,
+                );
+                openSetup(issue, others[0].id);
+                setView({ kind: "dashboard" });
+              }
             }}
           />
         )}
       </main>
 
-      <DebateSetupModal
+      <ChatSetupModal
         issue={setupIssue}
         open={!!setupIssue}
-        initialPersonaId={setupPersona}
+        initialCharacterId={setupCharacter}
         onClose={() => setSetupIssue(null)}
-        onStart={startDebate}
+        onStart={startChat}
       />
 
       {storiesOpen && (
@@ -210,7 +195,7 @@ export default function HomePage() {
             setSelectedIssue(i);
             setStoriesOpen(false);
           }}
-          onStartDebate={(i) => openSetup(i)}
+          onStartChat={(i) => openSetup(i)}
         />
       )}
     </div>
@@ -234,7 +219,7 @@ function Header({
         <button onClick={onHome} className="flex items-center gap-2">
           <Brand />
           <span className="hidden text-xs text-[var(--muted)] sm:inline">
-            · 실시간 이슈와 AI 1:1 토론
+            · 이슈를 같이 짚어보는 5분 대화
           </span>
         </button>
 
@@ -242,12 +227,12 @@ function Header({
           <NavBtn
             active={currentView === "dashboard"}
             onClick={onHome}
-            label="대시보드"
+            label="발견"
           />
           <NavBtn
             active={currentView === "history"}
             onClick={onHistory}
-            label={`기록 ${historyCount > 0 ? `(${historyCount})` : ""}`}
+            label={`책장 ${historyCount > 0 ? `(${historyCount})` : ""}`}
           />
         </nav>
       </div>
@@ -289,7 +274,7 @@ function Dashboard({
   onCategoryChange,
   selectedIssue,
   onSelect,
-  onStartDebate,
+  onStartChat,
   onOpenStories,
 }: {
   loading: boolean;
@@ -301,14 +286,14 @@ function Dashboard({
   onCategoryChange: (c: Category) => void;
   selectedIssue: TrendIssue | null;
   onSelect: (issue: TrendIssue) => void;
-  onStartDebate: (issue: TrendIssue, persona?: PersonaId) => void;
+  onStartChat: (issue: TrendIssue, characterId?: CharacterId) => void;
   onOpenStories: () => void;
 }) {
   return (
     <>
       <Hero
-        onStartRandom={() => {
-          if (hotRisers[0]) onStartDebate(hotRisers[0]);
+        onStartTopHot={() => {
+          if (hotRisers[0]) onStartChat(hotRisers[0]);
         }}
         onOpenStories={onOpenStories}
       />
@@ -317,7 +302,7 @@ function Dashboard({
         <HotRisers
           issues={hotRisers}
           onSelect={onSelect}
-          onStartDebate={onStartDebate}
+          onStartChat={onStartChat}
         />
       </div>
 
@@ -328,7 +313,7 @@ function Dashboard({
               관심사로 골라보기
             </h2>
             <p className="text-xs text-[var(--muted)]">
-              10대·20대 관심사부터 도메인까지 — 카드를 눌러 필터링
+              20대·30대 관심사부터 도메인까지
             </p>
           </div>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-white/5 px-3 py-1 text-[11px] text-[var(--muted)]">
@@ -343,7 +328,6 @@ function Dashboard({
           counts={counts}
         />
 
-        {/* 모바일 전용: 릴스 진입 */}
         <button
           onClick={onOpenStories}
           className="flex w-full items-center justify-between rounded-2xl border border-[var(--border)] bg-gradient-to-r from-rose-500/15 via-fuchsia-500/10 to-amber-500/15 p-4 text-left transition hover:border-white/20 sm:hidden"
@@ -353,10 +337,10 @@ function Dashboard({
               모바일 전용
             </div>
             <div className="text-sm font-semibold text-white">
-              릴스처럼 슈슉 넘겨보기
+              릴스처럼 슉슉 넘겨보기
             </div>
             <div className="text-[11px] text-white/70">
-              위/아래로 이슈 이동, 좌/우로 찬반 보기
+              위/아래로 이슈, 좌/우로 다른 시각
             </div>
           </div>
           <span className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold text-white">
@@ -377,14 +361,14 @@ function Dashboard({
                 <div className="space-y-3">
                   <SectionLabel
                     title="TOP 3"
-                    desc="이 필터에서 가장 뜨거운 이슈"
+                    desc="이 필터에서 가장 떠오르는 이슈"
                   />
                   {top.map((issue) => (
                     <IssueCard
                       key={issue.id}
                       issue={issue}
                       onSelect={onSelect}
-                      onStartDebate={onStartDebate}
+                      onStartChat={onStartChat}
                       isSelected={selectedIssue?.id === issue.id}
                     />
                   ))}
@@ -392,16 +376,13 @@ function Dashboard({
               )}
               {rest.length > 0 && (
                 <div className="space-y-3 pt-2">
-                  <SectionLabel
-                    title="이어지는 이슈"
-                    desc="더 둘러보기"
-                  />
+                  <SectionLabel title="이어지는 이슈" desc="더 둘러보기" />
                   {rest.map((issue) => (
                     <IssueCard
                       key={issue.id}
                       issue={issue}
                       onSelect={onSelect}
-                      onStartDebate={onStartDebate}
+                      onStartChat={onStartChat}
                       isSelected={selectedIssue?.id === issue.id}
                     />
                   ))}
@@ -414,7 +395,7 @@ function Dashboard({
         <IssueDetailPanel
           issue={selectedIssue}
           onClose={() => onSelect(null as unknown as TrendIssue)}
-          onStartDebate={onStartDebate}
+          onStartChat={onStartChat}
         />
       </div>
     </>
@@ -422,10 +403,10 @@ function Dashboard({
 }
 
 function Hero({
-  onStartRandom,
+  onStartTopHot,
   onOpenStories,
 }: {
-  onStartRandom: () => void;
+  onStartTopHot: () => void;
   onOpenStories: () => void;
 }) {
   return (
@@ -434,26 +415,25 @@ function Hero({
         <div className="space-y-4">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1 text-[11px] font-medium text-[var(--accent)]">
             <span className="live-dot h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-            오늘의 시사 토론 아레나
+            오늘의 이슈, 같이 5분만
           </div>
           <h1 className="text-2xl font-semibold leading-tight tracking-tight text-white sm:text-4xl">
-            궁금한 이슈, 그냥 보지 말고
+            궁금한 이슈, 혼자 보지 말고
             <br />
             <span className="bg-gradient-to-r from-[var(--accent)] to-[var(--accent-2)] bg-clip-text text-transparent">
-              AI랑 한 판 붙어보세요.
+              결 맞는 친구랑 한 번 짚어봐요.
             </span>
           </h1>
           <p className="max-w-xl text-sm leading-relaxed text-white/75 sm:text-base">
-            실시간 트렌드를 한눈에 보고, 마음에 드는 봇을 골라 1:1로 토론합니다.
-            점잖은 진행자부터 직설적인 형까지, 4명의 AI가 당신의 논리력을
-            마주합니다.
+            토론이 아니에요. 깡깡녀·옆집아재·교수님·국무총리 — 4명 중 한 명을
+            골라 가볍게 얘기 나눠요. 끝나면 ‘오늘 새로 본 것’만 남아요.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={onStartRandom}
+              onClick={onStartTopHot}
               className="rounded-xl bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_12px_32px_-12px_rgba(255,77,109,0.7)] transition hover:bg-[#ff6680]"
             >
-              지금 뜨는 이슈로 토론 시작 →
+              지금 뜨는 이슈로 시작 →
             </button>
             <button
               onClick={onOpenStories}
@@ -464,7 +444,7 @@ function Hero({
           </div>
         </div>
 
-        <PersonaPreview />
+        <CharacterPreview />
       </div>
 
       <div
@@ -479,45 +459,39 @@ function Hero({
   );
 }
 
-function PersonaPreview() {
+function CharacterPreview() {
   return (
     <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur">
       <div className="mb-3 flex items-center justify-between">
         <span className="text-[11px] font-semibold uppercase tracking-widest text-white/70">
-          오늘의 토론 상대
+          오늘 같이 얘기할 친구들
         </span>
-        <span className="text-[11px] text-white/50">4명 중 골라요</span>
+        <span className="text-[11px] text-white/50">4명 중 1명</span>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        {PERSONAS.map((p) => (
+        {CHARACTERS.map((c) => (
           <div
-            key={p.id}
-            className="relative flex h-[88px] flex-col justify-between overflow-hidden rounded-xl border border-white/10 p-2.5"
+            key={c.id}
+            className="relative flex h-[78px] flex-col justify-between overflow-hidden rounded-xl border border-white/10 p-2.5"
           >
             <div
-              className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-90 ${p.gradient}`}
+              className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-90 ${c.gradient}`}
             />
             <div className="absolute inset-0 -z-10 bg-black/45" />
-            <div className="flex items-center justify-between">
-              <span className="text-xl drop-shadow">{p.emoji}</span>
-              <span className="rounded-full bg-black/40 px-1.5 py-0.5 text-[9px] font-medium text-white/80">
-                {p.recommendedDifficulty}
-              </span>
-            </div>
+            <span className="text-xl drop-shadow">{c.emoji}</span>
             <div>
               <div className="text-[12px] font-semibold text-white">
-                {p.shortName}
+                {c.name}
               </div>
               <div className="line-clamp-1 text-[10px] text-white/75">
-                {p.tagline}
+                {c.oneLiner}
               </div>
             </div>
           </div>
         ))}
       </div>
       <p className="mt-3 text-[11px] leading-relaxed text-white/60">
-        이슈에서 ‘토론 시작’을 누르면 봇·난이도·라운드를 정해 토론방으로
-        들어갑니다.
+        승부 X · 점수 X · 토론 X. 끝나면 오늘 새로 본 것만 남아요.
       </p>
     </div>
   );

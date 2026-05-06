@@ -5,11 +5,11 @@ import type { TrendIssue } from "@/lib/types";
 export function HotRisers({
   issues,
   onSelect,
-  onStartDebate,
+  onStartChat,
 }: {
   issues: TrendIssue[];
   onSelect: (issue: TrendIssue) => void;
-  onStartDebate: (issue: TrendIssue) => void;
+  onStartChat: (issue: TrendIssue) => void;
 }) {
   if (issues.length === 0) return null;
 
@@ -37,7 +37,7 @@ export function HotRisers({
               issue={issue}
               hotRank={idx + 1}
               onSelect={onSelect}
-              onStartDebate={onStartDebate}
+              onStartChat={onStartChat}
             />
           ))}
         </div>
@@ -50,12 +50,12 @@ function RiserCard({
   issue,
   hotRank,
   onSelect,
-  onStartDebate,
+  onStartChat,
 }: {
   issue: TrendIssue;
   hotRank: number;
   onSelect: (issue: TrendIssue) => void;
-  onStartDebate: (issue: TrendIssue) => void;
+  onStartChat: (issue: TrendIssue) => void;
 }) {
   return (
     <button
@@ -89,7 +89,7 @@ function RiserCard({
             <span className="rounded-md border border-white/20 bg-black/40 px-2 py-0.5 text-[10px] text-white/90">
               {issue.category}
             </span>
-            {issue.targetAge.map((a) => (
+            {issue.audienceAge.map((a) => (
               <span
                 key={a}
                 className="rounded-md border border-fuchsia-300/40 bg-fuchsia-300/15 px-2 py-0.5 text-[10px] text-fuchsia-100"
@@ -107,12 +107,12 @@ function RiserCard({
           <div
             onClick={(e) => {
               e.stopPropagation();
-              onStartDebate(issue);
+              onStartChat(issue);
             }}
             className="mt-1 inline-flex w-full cursor-pointer items-center justify-center rounded-lg bg-white/15 py-2 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25"
             role="button"
           >
-            이 주제로 AI와 토론 →
+            지금 같이 얘기 →
           </div>
         </div>
       </div>

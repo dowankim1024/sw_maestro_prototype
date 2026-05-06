@@ -1,29 +1,29 @@
-import type { DebateResult } from "./types";
+import type { ChatInsight } from "./types";
 
-const STORAGE_KEY = "trendarena.debate.history.v1";
+const STORAGE_KEY = "trendarena.chat.history.v3";
 
 /**
- * 토론 결과 저장 (localStorage 기반).
- * 추후 saveDebateHistory()를 서버 API로 교체할 수 있음.
- *   await fetch("/api/history", { method: "POST", body: JSON.stringify(result) });
+ * 인사이트 저장 (localStorage).
+ * 추후 saveChatInsight() 를 서버 API로 교체 가능.
+ *   await fetch("/api/insights", { method: "POST", body: JSON.stringify(insight) });
  */
-export function saveDebateHistory(result: DebateResult): void {
+export function saveChatInsight(insight: ChatInsight): void {
   if (typeof window === "undefined") return;
-  const list = loadDebateHistory();
-  const next = [result, ...list].slice(0, 50);
+  const list = loadChatInsights();
+  const next = [insight, ...list].slice(0, 50);
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   } catch {
-    // 용량 초과 등 실패 시 무시 (MVP)
+    // 용량 초과 등은 무시 (MVP)
   }
 }
 
-export function loadDebateHistory(): DebateResult[] {
+export function loadChatInsights(): ChatInsight[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as DebateResult[];
+    const parsed = JSON.parse(raw) as ChatInsight[];
     if (!Array.isArray(parsed)) return [];
     return parsed;
   } catch {
@@ -31,13 +31,13 @@ export function loadDebateHistory(): DebateResult[] {
   }
 }
 
-export function clearDebateHistory(): void {
+export function clearChatInsights(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(STORAGE_KEY);
 }
 
-export function deleteDebateHistory(id: string): void {
+export function deleteChatInsight(id: string): void {
   if (typeof window === "undefined") return;
-  const next = loadDebateHistory().filter((r) => r.id !== id);
+  const next = loadChatInsights().filter((i) => i.id !== id);
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
 }

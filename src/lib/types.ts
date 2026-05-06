@@ -2,7 +2,7 @@ export type Sentiment = "positive" | "neutral" | "negative" | "controversial";
 
 export type SourceType = "news" | "community" | "social" | "search" | "rss";
 
-export type AgeGroup = "10대" | "20대";
+export type AudienceAge = "20대" | "30대";
 
 export type IssueCategory =
   | "정치/사회"
@@ -13,12 +13,12 @@ export type IssueCategory =
   | "커뮤니티"
   | "글로벌";
 
-export type Category = AgeGroup | "전체" | IssueCategory;
+export type Category = AudienceAge | "전체" | IssueCategory;
 
-// 필터 탭 노출 순서: 연령 → 전체 → 도메인
+// 필터 탭 노출 순서: 연령(20대 → 30대) → 전체 → 도메인
 export const CATEGORIES: Category[] = [
-  "10대",
   "20대",
+  "30대",
   "전체",
   "정치/사회",
   "경제",
@@ -32,19 +32,19 @@ export const CATEGORIES: Category[] = [
 export interface CategoryMeta {
   emoji: string;
   caption: string;
-  /** 칩 그라데이션 (Tailwind from/via/to 클래스) */
+  /** 칩 그라데이션 (Tailwind from/via/to) */
   gradient: string;
 }
 
 export const CATEGORY_META: Record<Category, CategoryMeta> = {
-  "10대": {
+  "20대": {
     emoji: "🧃",
-    caption: "교복부터 입시까지",
+    caption: "취업·연애·관심사",
     gradient: "from-fuchsia-500/40 via-rose-500/30 to-orange-400/30",
   },
-  "20대": {
-    emoji: "🎧",
-    caption: "취업·연애·관심사",
+  "30대": {
+    emoji: "🍵",
+    caption: "일·돈·살림 이야기",
     gradient: "from-cyan-500/40 via-sky-500/30 to-indigo-500/30",
   },
   전체: {
@@ -90,11 +90,21 @@ export const CATEGORY_META: Record<Category, CategoryMeta> = {
 };
 
 export interface IssueSource {
+  /** 내부 보관용. UI에는 노출하지 않음 */
   name: string;
   type: SourceType;
-  /** 내부 보관용. UI에는 노출하지 않음 */
   url: string;
   publishedAt: string;
+}
+
+/**
+ * 관점(Perspective).
+ * v3에서는 ‘찬성/반대’ 라벨을 쓰지 않는다. 항상 둘 이상의 ‘시각’만 있다.
+ */
+export interface Perspective {
+  /** 예: "이렇게 보는 사람들" */
+  label: string;
+  points: string[];
 }
 
 export interface TrendIssue {
@@ -104,107 +114,90 @@ export interface TrendIssue {
   category: IssueCategory;
   /** 카드/슬라이드용 한 줄 후킹 */
   oneLine: string;
+  /** 좀 더 길게 한 단락 요약 */
   summary: string;
   whyTrending: string;
   trendScore: number;
   mentionCount: number;
   growthRate: number;
   sentiment: Sentiment;
-  controversyScore: number;
+  /** 0~100. UI에 ‘논쟁성’이라는 단어로는 노출하지 않는다. */
+  buzzScore: number;
   keywords: string[];
-  /** 연령 관심사 태그 (필터링용) */
-  targetAge: AgeGroup[];
-  /** 이미지 시드 (picsum.photos seed 등) */
+  audienceAge: AudienceAge[];
   imageSeed: string;
-  /** 카드 커버 이모지 (이미지 로딩 실패 대비/장식) */
   coverEmoji: string;
   sources: IssueSource[];
-  proArguments: string[];
-  conArguments: string[];
+  /** 항상 2개의 시각. 단어는 중립적. */
+  perspectives: [Perspective, Perspective];
 }
 
-export type DebateRole = "user" | "ai" | "system";
+// === 캐릭터 ===
+export type CharacterId = "kkang" | "uncle" | "prof" | "pm";
+export type CharacterTone = "직설_공감" | "생활밀착" | "학술" | "정책";
 
-export interface DebateMessage {
+export interface Character {
+  id: CharacterId;
+  name: string;
+  shortName: string;
+  oneLiner: string;
+  description: string;
+  emoji: string;
+  /** Tailwind from/via/to */
+  gradient: string;
+  tone: CharacterTone;
+}
+
+// === 대화 ===
+export type ChatRole = "user" | "character" | "system";
+
+export type Mood = "공감" | "시각공유" | "지식체크";
+
+export interface ChatTurn {
   id: string;
-  role: DebateRole;
-  content: string;
-  round: number;
+  role: ChatRole;
+  text: string;
+  /** role === 'character' 일 때만 의미 있음 */
+  mood?: Mood;
+  /** 이번 턴에서 인사이트로 잡힌 한 줄 (선택) */
+  capturedFact?: string;
   createdAt: string;
 }
 
-export type UserStance = "찬성" | "반대" | "AI 자동 선택";
-export type ResolvedStance = "찬성" | "반대";
-export type Difficulty = "쉬움" | "보통" | "어려움";
-
-// === AI 페르소나 ===
-export type PersonaId = "kkang" | "sohn" | "teen" | "econ";
-
-export interface Persona {
-  id: PersonaId;
-  name: string;
-  shortName: string;
-  tagline: string;
-  description: string;
-  emoji: string;
-  /** 그라데이션 (Tailwind) */
-  gradient: string;
-  /** 난이도 권장 (UI 가이드용) */
-  recommendedDifficulty: Difficulty;
-  /** 톤 가이드 (services.generateDebateReply 가 사용) */
-  tone: {
-    /** 자주 쓰는 첫 마디 / 추임새 */
-    intro: string[];
-    /** 강조 어휘 */
-    fillers: string[];
-    /** 마무리 어구 */
-    closer: string[];
-    /** aggression 가중 (0~1) */
-    sharpness: number;
-  };
-}
-
-export interface DebateScores {
-  logic: number;
-  evidence: number;
-  rebuttal: number;
-  emotionalControl: number;
-  persuasion: number;
-}
-
-export type Verdict = "사용자 우세" | "AI 우세" | "팽팽함";
-
-export interface DebateFeedback {
-  summary: string;
-  strengths: string[];
-  weaknesses: string[];
-  fallacies: string[];
-  nextTips: string[];
-}
-
-export interface DebateConfig {
+export interface ChatSession {
+  id: string;
   issueId: string;
-  userStance: UserStance;
-  resolvedUserStance: ResolvedStance;
-  aiStance: ResolvedStance;
-  difficulty: Difficulty;
-  totalRounds: 3 | 5 | 7;
-  personaId: PersonaId;
+  characterId: CharacterId;
+  startedAt: string;
 }
 
-export interface DebateResult {
+export interface ChatInsight {
   id: string;
   issueId: string;
   issueTitle: string;
-  userStance: ResolvedStance;
-  aiStance: ResolvedStance;
-  difficulty: Difficulty;
-  totalRounds: number;
-  personaId: PersonaId;
-  personaName: string;
-  messages: DebateMessage[];
-  scores: DebateScores;
-  finalVerdict: Verdict;
-  feedback: DebateFeedback;
+  characterId: CharacterId;
+  characterName: string;
+  newlyLearned: string[]; // 2~3
+  alreadyKnew: string[]; // 1~2
+  wantToExplore: string[]; // 1~2
+  characterClosing: string;
+  /** 내부 사용용 (히스토리 다시 보기) */
+  turns: ChatTurn[];
   createdAt: string;
 }
+
+// 자주 사용하는 빠른 응답 (텍스트 입력 부담 ↓)
+export type QuickReaction =
+  | "좀 더 쉽게"
+  | "예시 하나만"
+  | "한 줄로 요약"
+  | "나는 좀 다르게 봐"
+  | "공감돼";
+
+export const QUICK_REACTIONS: QuickReaction[] = [
+  "좀 더 쉽게",
+  "예시 하나만",
+  "한 줄로 요약",
+  "나는 좀 다르게 봐",
+  "공감돼",
+];

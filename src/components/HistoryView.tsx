@@ -1,24 +1,25 @@
 "use client";
 
-import type { DebateResult } from "@/lib/types";
+import { getCharacter } from "@/lib/characters";
+import type { ChatInsight } from "@/lib/types";
 
 export function HistoryView({
-  history,
+  insights,
   onOpen,
   onClear,
   onDelete,
 }: {
-  history: DebateResult[];
-  onOpen: (result: DebateResult) => void;
+  insights: ChatInsight[];
+  onOpen: (i: ChatInsight) => void;
   onClear: () => void;
   onDelete: (id: string) => void;
 }) {
-  if (history.length === 0) {
+  if (insights.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--background-elev)]/50 p-10 text-center text-sm text-[var(--muted)]">
-        아직 저장된 토론 기록이 없습니다.
+        아직 저장된 대화가 없어요.
         <br className="hidden sm:block" />
-        지금 뜨는 이슈로 첫 토론을 시작해보세요.
+        지금 뜨는 이슈로 첫 대화를 가볍게 시작해보세요.
       </div>
     );
   }
@@ -27,7 +28,7 @@ export function HistoryView({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <p className="text-sm text-[var(--muted)]">
-          최근 {history.length}건의 토론 기록 (브라우저 localStorage)
+          최근 {insights.length}건의 대화 (브라우저 localStorage)
         </p>
         <button
           onClick={onClear}
@@ -37,56 +38,43 @@ export function HistoryView({
         </button>
       </div>
       <ul className="space-y-2">
-        {history.map((r) => {
-          const total =
-            r.scores.logic +
-            r.scores.evidence +
-            r.scores.rebuttal +
-            r.scores.emotionalControl +
-            r.scores.persuasion;
-          const verdictColor =
-            r.finalVerdict === "사용자 우세"
-              ? "text-emerald-300"
-              : r.finalVerdict === "AI 우세"
-                ? "text-rose-300"
-                : "text-amber-300";
+        {insights.map((i) => {
+          const c = getCharacter(i.characterId);
+          const headline = i.newlyLearned[0];
           return (
             <li
-              key={r.id}
+              key={i.id}
               className="flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--border)] bg-[var(--background-card)] p-4"
             >
+              <div
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base ${c.gradient}`}
+              >
+                {c.emoji}
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[11px] text-[var(--muted)]">
-                  {new Date(r.createdAt).toLocaleString("ko-KR")} · 난이도{" "}
-                  {r.difficulty} · {r.totalRounds}라운드
+                  {new Date(i.createdAt).toLocaleString("ko-KR")} · {c.name}
                 </div>
                 <div className="mt-0.5 truncate text-sm font-semibold text-white">
-                  {r.issueTitle}
+                  {i.issueTitle}
                 </div>
-                <div className="mt-1 text-[12px] text-[var(--muted)]">
-                  vs <span className="text-white/85">{r.personaName}</span> ·
-                  내 입장 {r.userStance} · AI 입장 {r.aiStance}
-                </div>
+                {headline && (
+                  <div className="mt-1 line-clamp-1 text-[12px] text-white/75">
+                    ✨ {headline}
+                  </div>
+                )}
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className={`text-sm font-semibold ${verdictColor}`}>
-                    {r.finalVerdict}
-                  </div>
-                  <div className="font-mono text-xs text-white/70">
-                    총점 {total}
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => onOpen(r)}
+                  onClick={() => onOpen(i)}
                   className="rounded-md bg-white/10 px-3 py-1.5 text-xs text-white/90 hover:bg-white/15"
                 >
-                  다시 보기
+                  다시 펼치기
                 </button>
                 <button
-                  onClick={() => onDelete(r.id)}
-                  aria-label="기록 삭제"
+                  onClick={() => onDelete(i.id)}
+                  aria-label="삭제"
                   className="rounded-md border border-[var(--border)] bg-white/5 px-2 py-1.5 text-xs text-[var(--muted)] hover:text-rose-300"
                 >
                   삭제
