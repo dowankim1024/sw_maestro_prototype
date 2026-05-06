@@ -48,7 +48,7 @@ export function ChatRoom({
     }
   }, [turns, typing]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || typing || ended) return;
 
@@ -63,7 +63,7 @@ export function ChatRoom({
     setInput("");
     setTyping(true);
 
-    const reply = generateCharacterReply({
+    const reply = await generateCharacterReply({
       issue,
       characterId,
       userText: trimmed,

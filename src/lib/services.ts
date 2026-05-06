@@ -138,12 +138,12 @@ function openingLine(issue: TrendIssue, character: Character): string {
  *   const res = await fetch("/api/chat/reply", { method: "POST", body: JSON.stringify({ ... }) });
  *   return res.json().reply as { mood, text, capturedFact? };
  */
-export function generateCharacterReply(args: {
+export async function generateCharacterReply(args: {
   issue: TrendIssue;
   characterId: CharacterId;
   userText: string;
   history: ChatTurn[];
-}): { mood: Mood; text: string; capturedFact?: string } {
+}): Promise<{ mood: Mood; text: string; capturedFact?: string }> {
   const { issue, characterId, userText, history } = args;
   const character = getCharacter(characterId);
 
@@ -156,7 +156,7 @@ export function generateCharacterReply(args: {
   if (aggressive) {
     return {
       mood: "공감",
-      text: deescalate(character, userText),
+      text: deescalate(character),
     };
   }
 
@@ -172,7 +172,7 @@ export function generateCharacterReply(args: {
   else if (isAgreeMode) mood = "공감";
   else mood = charTurnCount % 2 === 0 ? "시각공유" : "공감";
 
-  const text = composeReply({
+  const fallbackText = composeReply({
     issue,
     character,
     userText,
@@ -180,7 +180,32 @@ export function generateCharacterReply(args: {
     isFirstResponse: charTurnCount <= 1,
   });
 
-  return { mood, text, capturedFact };
+  // 실제 Gemini 연동: 서버 Route Handler를 통해 호출 (키 노출 방지)
+  try {
+    const response = await fetch("/api/chat/reply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        issue,
+        characterId,
+        userText,
+        history: history.slice(-10),
+        moodHint: mood,
+      }),
+    });
+
+    if (response.ok) {
+      const data = (await response.json()) as { text?: string };
+      const text = data.text?.trim();
+      if (text) {
+        return { mood, text, capturedFact };
+      }
+    }
+  } catch {
+    // 네트워크/서버 오류 시 로컬 mock 응답으로 폴백
+  }
+
+  return { mood, text: fallbackText, capturedFact };
 }
 
 function composeReply(args: {
@@ -287,7 +312,7 @@ function pickAnecdote(issue: TrendIssue): string {
   return `‘${k}’ 관련된 비슷한 일`;
 }
 
-function deescalate(character: Character, _userText: string): string {
+function deescalate(character: Character): string {
   switch (character.id) {
     case "kkang":
       return "워, 잠깐. 욕은 빼고 가자. 네 결은 이해했고, 그래서 진짜 짚고 싶은 거 한 줄로 다시 말해봐. 같이 갈게.";
