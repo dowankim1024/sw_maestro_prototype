@@ -29,8 +29,7 @@ import type {
 
 /**
  * 오늘의 이슈 피드.
- * 정책: MVP에서는 mock 6건을
- * publishedAt 내림차순으로 단순 정렬해서 노출한다.
+ * 정책: MVP에서는 mock 이슈를 publishedAt 내림차순으로 단순 정렬해서 노출한다.
  */
 export async function fetchTodayIssues(): Promise<Issue[]> {
   await delay(80);
@@ -201,14 +200,14 @@ function localFallbackReply(
 
   switch (characterId) {
     case "kkang":
-      return `솔직히 내가 봤을 땐 ${oneLiner} 이 얘기야. ${factSnippet} 결국 생활로 오면 돈이든 시간이든 어디선가 티가 나거든. 너한테는 어디가 제일 바로 닿아?`;
+      return `쉽게 말하면 ${oneLiner} 이 얘기야. ${factSnippet} 내 생활로 오면 돈이든 시간이든 어딘가에서 바로 티가 나거든. 너한테는 어디가 제일 먼저 닿아?`;
     case "uncle":
-      return `흥미로운 게요, ${oneLiner} 라는 관점은 혼자 떨어진 이야기가 아니에요. ${factSnippet} 한 가지 짚고 싶은 건 이 변화가 어떤 구조 안에서 움직이는지를 같이 봐야 한다는 점이에요.`;
+      return `쉽게 말하면 ${oneLiner} 라는 뜻이에요. ${factSnippet} 한 가지 짚고 싶은 건, 이 일이 혼자 튀어나온 게 아니라 주변 흐름과 같이 움직인다는 점이에요.`;
     case "prof":
-      return `이거 지금 반응으로 보면 ${oneLiner} 쪽으로 이미 얘기가 돌고 있어. ${factSnippet} 근데 사람들이 소비하는 톤이랑 실제 사실은 좀 나눠봐야 해.`;
+      return `쉽게 말하면 지금 사람들은 ${oneLiner} 쪽으로 받아들이고 있어. ${factSnippet} 다만 인터넷 반응이랑 실제 사실은 나눠서 봐야 해.`;
     case "pm":
     default:
-      return `잠깐, 근데 ${oneLiner} 라고만 보기엔 좀 더 봐야 돼. ${factSnippet} 다른 가능성도 있어서, 출처에 나온 것과 해석을 나눠 보는 게 좋아. — ${character.name}`;
+      return `쉽게 말하면 ${oneLiner} 라고 바로 단정하긴 이르다는 거야. ${factSnippet} 확인할 것 하나는, 출처에 나온 사실과 그 위에 붙은 해석을 나눠 보는 거야. — ${character.name}`;
   }
 }
 

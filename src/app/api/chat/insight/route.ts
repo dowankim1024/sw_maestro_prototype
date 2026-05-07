@@ -150,6 +150,7 @@ function buildUserPrompt(input: InsightRequest): string {
     transcript,
     "",
     "위 입력을 기반으로 시스템 지시에 따른 JSON만 출력하세요.",
+    "카드 문장은 사용자가 처음 봐도 이해할 수 있게 쉬운 말로 쓰세요.",
   ].join("\n");
 }
 

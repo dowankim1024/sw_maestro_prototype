@@ -10,8 +10,8 @@ import type { Issue } from "./types";
  *    동일한 사실 기반 위에서 다른 정보 레이어를 얹는다.
  *  - safetyLevel: 정치·정책 갈등은 'sensitive', 일반 트렌드는 'normal'.
  *
- * 출처는 가상 매체명을 사용한다 (프로토타입 단계). 실제 발행 시에는
- * 운영자 검수 도구를 통해 검증된 출처로 교체된다.
+ * 기존 프로토타입 이슈는 가상 매체명을 사용한다. 신규 트렌드 이슈는
+ * 공개 보도 URL을 함께 남기며, 실제 발행 시 운영자 검수 도구로 재확인한다.
  */
 
 const ISO = (d: string) => new Date(d).toISOString();
@@ -728,6 +728,574 @@ export const mockIssues: Issue[] = [
       "코인 빠진 돈이 정말 코스피로 간 거야?",
       "지금 너무 빨리 올라서 거품 아니야?",
       "단기 급등 뒤 변수는 뭐가 있어?",
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. 키캡 키링과 스트레스 굿즈
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: "issue-keycap-keyring",
+    title: "키캡 키링, 왜 갑자기 가방에 다는 거야?",
+    shortTitle: "키캡 키링이 뜨는 이유",
+    summary:
+      "키보드 버튼처럼 딸깍 누르는 키캡 키링과 말랑한 스트레스 굿즈가 20~30대 사이에서 가방 장식이자 손장난 아이템으로 주목받는다는 보도.",
+    whyNow:
+      "바쁜 일상에서 잠깐 손으로 누르고 만지는 작은 물건이 스트레스 해소와 자기표현을 동시에 해준다는 식으로 소비되고, 캐릭터 굿즈와 편의점 한정판 마케팅까지 붙은 흐름.",
+    category: "문화",
+    publishedAt: ISO("2026-05-07T09:50:00+09:00"),
+    updatedAt: ISO("2026-05-07T09:50:00+09:00"),
+    readTimeSec: 30,
+    keywords: ["키캡 키링", "스트레스 굿즈", "가방 꾸미기"],
+    safetyLevel: "normal",
+    coverEmoji: "⌨️",
+    coverImage: "https://picsum.photos/seed/issuecast-keycap/720/1280",
+    facts: [
+      {
+        id: "f-keycap-1",
+        statement:
+          "키캡 키링은 기계식 키보드 스위치처럼 누르는 작은 액세서리로, 20~30대 소비자 사이에서 스트레스 해소용 가방 아이템으로 떠오른다는 보도가 있다.",
+        sourceIds: ["s-keycap-1", "s-keycap-2"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:50:00+09:00"),
+      },
+      {
+        id: "f-keycap-2",
+        statement:
+          "소셜 데이터 분석에서 키캡 키링 관련 인스타그램 언급이 2025년 12월 대비 2026년 2월에 137% 늘었다는 보도가 있다.",
+        sourceIds: ["s-keycap-1", "s-keycap-2"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:50:00+09:00"),
+      },
+      {
+        id: "f-keycap-3",
+        statement:
+          "편의점 캐릭터 키캡 키링, DIY 조립 매장, 캐릭터 장식이 트렌드 확산에 영향을 줬다는 분석이 함께 제시됐다.",
+        sourceIds: ["s-keycap-1"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:50:00+09:00"),
+      },
+    ],
+    sources: [
+      {
+        id: "s-keycap-1",
+        title: "Click-clack: In high-pressure Korea, young people find stress relief in keycaps",
+        publisher: "Korea JoongAng Daily",
+        url: "https://koreajoongangdaily.joins.com/news/2026-04-24/business/industry/Clickclack-In-highpressure-Korea-young-people-find-stress-relief-in-keycaps/2574417",
+        publishedAt: ISO("2026-04-24T07:01:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:50:00+09:00"),
+        type: "news",
+      },
+      {
+        id: "s-keycap-2",
+        title: "Stress-relief items become everyday essentials for Gen Zs in South Korea",
+        publisher: "The Straits Times",
+        url: "https://www.straitstimes.com/asia/east-asia/stress-relief-items-become-everyday-essentials-for-gen-zs-in-south-korea",
+        publishedAt: ISO("2026-04-21T10:41:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:50:00+09:00"),
+        type: "news",
+      },
+    ],
+    characterAngles: [
+      {
+        characterId: "kkang",
+        lensLabel: "생활자 관점",
+        oneLiner: "비싼 취미는 아닌데, 작은 기분 전환은 되겠네",
+        viewpoint:
+          "솔직히 이건 거창한 유행이라기보다 손에 쥐는 작은 쉬는 시간 같아. 몇천 원짜리 키링 하나가 하루 스트레스를 다 해결하진 못해도, 가방에 달고 딸깍거리면 잠깐 숨 돌릴 수는 있잖아. 내가 봤을 땐 ‘작은 돈으로 기분 바꾸기’ 쪽이야.",
+        opinionDisclaimer: "생활자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-keycap-1", "f-keycap-3"],
+      },
+      {
+        characterId: "uncle",
+        lensLabel: "전문가 관점",
+        oneLiner: "스트레스가 작은 물건 소비로 옮겨간 사례예요",
+        viewpoint:
+          "쉽게 말하면, 마음이 답답할 때 손으로 만질 수 있는 물건을 찾는 흐름이에요. 키캡 키링은 장난감이면서 장식이고, 동시에 아주 짧은 휴식 도구처럼 쓰입니다. 흥미로운 건 스트레스 관리가 상담이나 운동처럼 큰 행동만이 아니라 작은 소비 습관으로도 나타난다는 점이에요.",
+        opinionDisclaimer: "전문가 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-keycap-1", "f-keycap-2", "f-keycap-3"],
+      },
+      {
+        characterId: "prof",
+        lensLabel: "트렌드 관점",
+        oneLiner: "가방 꾸미기랑 딸깍 소리가 같이 뜬 거야",
+        viewpoint:
+          "이거 진짜 포인트는 귀여움이랑 손맛이 같이 온 거야. 그냥 키링이면 사진용인데, 이건 누르면 소리도 나고 손도 바쁘거든. 그래서 가방 꾸미기, 캐릭터 굿즈, 스트레스 해소가 한 번에 묶인 흐름으로 보이는 거지.",
+        opinionDisclaimer: "트렌드 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-keycap-1", "f-keycap-2", "f-keycap-3"],
+      },
+      {
+        characterId: "pm",
+        lensLabel: "회의주의자 관점",
+        oneLiner: "잠깐, 모두가 쓰는 유행인지는 더 봐야 해",
+        viewpoint:
+          "잠깐, 근데 언급량이 늘었다고 해서 모두가 들고 다닌다는 뜻은 아니야. 확인할 것 하나는 이게 일부 매장과 SNS에서 크게 보이는 흐름인지, 실제로 오래 가는 소비인지야. 지금은 ‘뜨고 있다는 보도’와 ‘전국민 유행’을 나눠 봐야 해.",
+        opinionDisclaimer: "회의주의자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-keycap-1", "f-keycap-2"],
+      },
+    ],
+    conversationStarters: [
+      "키캡 키링이 왜 스트레스 해소가 돼?",
+      "그냥 귀여운 굿즈랑 뭐가 달라?",
+      "이게 진짜 오래 갈 유행일까?",
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 8. 저당·제로슈거 간식과 음료
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: "issue-low-sugar-snack",
+    title: "단 거 먹는데 ‘저당’이면 괜찮은 거야?",
+    shortTitle: "저당 간식이 뜨는 이유",
+    summary:
+      "제로슈거, 저당, 저칼로리 간식과 음료가 ‘맛은 챙기고 부담은 줄이는’ 소비 흐름으로 이어진다는 보도.",
+    whyNow:
+      "젊은 소비자들이 설탕·카페인·알코올을 줄이려는 흐름을 보이면서 편의점, 카페, 식음료 기업이 저당·디카페인·단백질 제품을 빠르게 늘리고 있다.",
+    category: "문화",
+    publishedAt: ISO("2026-05-07T09:40:00+09:00"),
+    updatedAt: ISO("2026-05-07T09:40:00+09:00"),
+    readTimeSec: 30,
+    keywords: ["저당", "제로슈거", "헬시 플레저"],
+    safetyLevel: "normal",
+    coverEmoji: "🍬",
+    coverImage: "https://picsum.photos/seed/issuecast-low-sugar/720/1280",
+    facts: [
+      {
+        id: "f-low-sugar-1",
+        statement:
+          "한국의 젊은 소비자 사이에서 차, 제로슈거 탄산, 단백질 음료처럼 건강 부담을 줄인 선택지가 늘고 있다는 보도가 있다.",
+        sourceIds: ["s-low-sugar-1"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:40:00+09:00"),
+      },
+      {
+        id: "f-low-sugar-2",
+        statement:
+          "GS25 자료를 인용한 보도에서 2024년 스포츠음료와 제로슈거 탄산 비중이 전년보다 늘고, 일반 탄산 비중은 줄었다고 설명됐다.",
+        sourceIds: ["s-low-sugar-1"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:40:00+09:00"),
+      },
+      {
+        id: "f-low-sugar-3",
+        statement:
+          "BGF리테일은 저당·제로슈거·저칼로리 제품 매출이 최근 3년 동안 매년 두 자릿수 성장했다고 밝혔다고 보도됐다.",
+        sourceIds: ["s-low-sugar-2"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:40:00+09:00"),
+      },
+    ],
+    sources: [
+      {
+        id: "s-low-sugar-1",
+        title: "Young consumers swap sweet sodas and coffee for low-sugar, decaf 'healthy pleasures'",
+        publisher: "Korea JoongAng Daily",
+        url: "https://koreajoongangdaily.joins.com/news/2026-03-11/business/industry/Young-consumers-swap-sweet-sodas-and-coffee-for-lowsugar-decaf-healthy-pleasures/2541501",
+        publishedAt: ISO("2026-03-11T07:00:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:40:00+09:00"),
+        type: "news",
+      },
+      {
+        id: "s-low-sugar-2",
+        title: "F&B industry rolls out healthier options as young consumers sour on sugar, alcohol and caffeine",
+        publisher: "Korea JoongAng Daily",
+        url: "https://koreajoongangdaily.joins.com/news/2026-04-13/business/industry/FB-industry-rolls-out-healthier-options-as-young-consumers-sour-on-sugar-alcohol-and-caffeine/2566013",
+        publishedAt: ISO("2026-04-13T14:01:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:40:00+09:00"),
+        type: "news",
+      },
+    ],
+    characterAngles: [
+      {
+        characterId: "kkang",
+        lensLabel: "생활자 관점",
+        oneLiner: "맛은 먹고 싶은데 괜히 죄책감은 줄이고 싶은 거지",
+        viewpoint:
+          "솔직히 단 건 먹고 싶잖아. 근데 요즘은 몸 걱정도 같이 하니까 ‘그래도 저당이면 좀 낫겠지’ 하고 고르는 거야. 내가 봤을 땐 완전 건강식이라기보다 부담을 조금 줄인 간식 쪽에 가까워.",
+        opinionDisclaimer: "의료 조언이 아닌 생활자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-low-sugar-1", "f-low-sugar-3"],
+      },
+      {
+        characterId: "uncle",
+        lensLabel: "전문가 관점",
+        oneLiner: "참는 건강보다 덜 부담스러운 선택이 커지는 흐름이에요",
+        viewpoint:
+          "쉽게 말하면 ‘아예 안 먹기’보다 ‘조금 덜 부담되게 먹기’를 고르는 사람이 늘어난 거예요. 그래서 음료와 간식 시장도 맛을 없애기보다 설탕, 카페인, 칼로리 부담을 낮추는 방향으로 움직입니다. 다만 저당이라는 말만으로 모든 제품이 건강하다고 보긴 어렵습니다.",
+        opinionDisclaimer: "의료 조언이 아닌 전문가 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-low-sugar-1", "f-low-sugar-2", "f-low-sugar-3"],
+      },
+      {
+        characterId: "prof",
+        lensLabel: "트렌드 관점",
+        oneLiner: "요즘은 ‘맛있는데 덜 찝찝한 것’이 잘 팔려",
+        viewpoint:
+          "이거 지금 완전 ‘덜 찝찝한 간식’ 흐름이야. 제로슈거, 저당, 단백질 이런 단어가 붙으면 사진 찍는 맛보다 매일 사 먹는 이유가 생기거든. 사람들이 건강식까지는 아니어도 ‘이 정도면 괜찮지’ 하는 선택을 많이 하는 느낌이야.",
+        opinionDisclaimer: "트렌드 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-low-sugar-1", "f-low-sugar-2", "f-low-sugar-3"],
+      },
+      {
+        characterId: "pm",
+        lensLabel: "회의주의자 관점",
+        oneLiner: "잠깐, 저당이라고 무조건 좋은 건 아니야",
+        viewpoint:
+          "잠깐, 근데 저당이라는 말만 보고 바로 건강하다고 보면 안 돼. 확인할 것 하나는 당이 줄었는지, 대신 다른 성분이나 총열량은 어떤지야. 보도는 시장 흐름을 말해주지만, 제품 하나하나는 성분표를 따로 봐야 해.",
+        opinionDisclaimer: "의료 조언이 아닌 회의주의자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-low-sugar-1", "f-low-sugar-3"],
+      },
+    ],
+    conversationStarters: [
+      "저당이면 진짜 마음 놓고 먹어도 돼?",
+      "제로슈거가 왜 이렇게 많아졌어?",
+      "성분표에서 뭘 먼저 봐야 해?",
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 9. 숏폼 드라마
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: "issue-shortform-drama",
+    title: "1분 드라마, 진짜 드라마 시장을 바꾸나?",
+    shortTitle: "숏폼 드라마가 뜬 이유",
+    summary:
+      "1~3분 안팎의 짧은 세로형 드라마가 모바일 시청 습관과 맞물려 제작사, 플랫폼, 유명 감독들의 새 실험으로 주목받는다는 보도.",
+    whyNow:
+      "긴 드라마 제작비 부담이 커지고 스마트폰으로 짧게 보는 습관이 굳어지면서, 완결된 이야기를 아주 짧은 회차로 나눠 보여주는 시장에 방송사와 제작사가 뛰어드는 분위기.",
+    category: "문화",
+    publishedAt: ISO("2026-05-07T09:30:00+09:00"),
+    updatedAt: ISO("2026-05-07T09:30:00+09:00"),
+    readTimeSec: 30,
+    keywords: ["숏폼 드라마", "세로형 영상", "모바일 콘텐츠"],
+    safetyLevel: "normal",
+    coverEmoji: "📱",
+    coverImage: "https://picsum.photos/seed/issuecast-shortdrama/720/1280",
+    facts: [
+      {
+        id: "f-shortform-1",
+        statement:
+          "방송사, OTT, 영화·드라마 제작사와 배급사가 숏폼 드라마 시장에 잇따라 진입하고 있다는 보도가 있다.",
+        sourceIds: ["s-shortform-1"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:30:00+09:00"),
+      },
+      {
+        id: "f-shortform-2",
+        statement:
+          "숏폼 드라마는 단순 홍보용 짧은 영상이 아니라 각 영상 안에 이야기가 있는 완결형 콘텐츠로 설명된다.",
+        sourceIds: ["s-shortform-1"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:30:00+09:00"),
+      },
+      {
+        id: "f-shortform-3",
+        statement:
+          "KT스튜디오지니의 2026년 1월 공개 숏폼 드라마 두 편이 DramaBox와 ReelShort 인기 순위 1위에 올랐다는 보도가 있다.",
+        sourceIds: ["s-shortform-2"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:30:00+09:00"),
+      },
+    ],
+    sources: [
+      {
+        id: "s-shortform-1",
+        title: "Star Directors, Major Distributors Pivot to Short-Form Drama Market",
+        publisher: "Seoul Economic Daily",
+        url: "https://en.sedaily.com/culture/2026/02/19/star-directors-major-distributors-pivot-to-short-form-drama",
+        publishedAt: ISO("2026-02-19T10:30:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:30:00+09:00"),
+        type: "news",
+      },
+      {
+        id: "s-shortform-2",
+        title: "KT Studio Genie Tops Global Short-Form Drama Charts With Debut Release",
+        publisher: "Seoul Economic Daily",
+        url: "https://en.sedaily.com/culture/2026/02/09/kt-studio-genie-tops-global-short-form-drama-charts-with",
+        publishedAt: ISO("2026-02-09T09:43:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:30:00+09:00"),
+        type: "news",
+      },
+    ],
+    characterAngles: [
+      {
+        characterId: "kkang",
+        lensLabel: "생활자 관점",
+        oneLiner: "밥 먹고 잠깐 보기엔 편한데, 돈 내고 볼지는 따져봐야지",
+        viewpoint:
+          "솔직히 1분짜리면 버스 기다리면서도 보겠지. 긴 드라마처럼 마음먹고 틀 필요가 없으니까 생활 틈새에 들어오기 쉬워. 다만 계속 결제하거나 광고를 봐야 하면 그때부터는 ‘이게 내 시간값을 하나’ 따져보게 될 거야.",
+        opinionDisclaimer: "생활자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-shortform-1", "f-shortform-2"],
+      },
+      {
+        characterId: "uncle",
+        lensLabel: "전문가 관점",
+        oneLiner: "긴 영상이 짧아진 게 아니라 보는 방식이 바뀐 거예요",
+        viewpoint:
+          "쉽게 말하면 드라마가 작아졌다기보다, 사람들이 보는 자리가 바뀐 거예요. TV 앞 한 시간보다 휴대폰으로 잠깐 보는 시간이 많아지니 제작 방식도 그쪽으로 움직입니다. 유명 제작사와 감독이 들어온다는 건 이 형식이 실험 단계를 지나고 있다는 신호로 볼 수 있어요.",
+        opinionDisclaimer: "전문가 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-shortform-1", "f-shortform-2", "f-shortform-3"],
+      },
+      {
+        characterId: "prof",
+        lensLabel: "트렌드 관점",
+        oneLiner: "한 편만 보려다 계속 넘기게 만드는 구조야",
+        viewpoint:
+          "이거 흐름이 딱 모바일용이야. 세로 화면에 사건이 빨리 터지고, 한 회가 짧으니까 ‘하나만 더’가 되거든. 그래서 숏폼 드라마는 작품성 논쟁도 있지만, 지금 사람들이 보는 습관에는 꽤 잘 맞아.",
+        opinionDisclaimer: "트렌드 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-shortform-1", "f-shortform-2", "f-shortform-3"],
+      },
+      {
+        characterId: "pm",
+        lensLabel: "회의주의자 관점",
+        oneLiner: "잠깐, 차트 1위가 오래 가는 시장을 뜻하진 않아",
+        viewpoint:
+          "잠깐, 근데 몇 편이 1위를 했다고 바로 시장 전체가 바뀐다고 보긴 어려워. 확인할 것 하나는 사람들이 무료로 잠깐 보는지, 계속 돈을 내고 보는지야. 제작사가 들어오는 흐름은 분명하지만, 오래 가는 사업인지와 잠깐의 화제성은 나눠 봐야 해.",
+        opinionDisclaimer: "회의주의자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-shortform-1", "f-shortform-3"],
+      },
+    ],
+    conversationStarters: [
+      "숏폼 드라마는 그냥 짧은 유튜브랑 뭐가 달라?",
+      "왜 제작사들이 여기에 들어와?",
+      "진짜 돈 되는 시장일까?",
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 10. 러닝 붐과 러닝크루
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: "issue-running-boom",
+    title: "러닝크루랑 런트립, 왜 이렇게 많아졌어?",
+    shortTitle: "러닝 붐이 커진 이유",
+    summary:
+      "러닝 인구 증가와 함께 러닝크루, 마라톤, 여행을 겸한 런트립, 브랜드 러닝 행사가 늘고 있다는 보도.",
+    whyNow:
+      "건강 관리와 커뮤니티 욕구가 만나면서 러닝이 혼자 하는 운동을 넘어 모임, 여행, 쇼핑, 도시 프로그램까지 묶는 생활 트렌드로 커지고 있다.",
+    category: "문화",
+    publishedAt: ISO("2026-05-07T09:20:00+09:00"),
+    updatedAt: ISO("2026-05-07T09:20:00+09:00"),
+    readTimeSec: 30,
+    keywords: ["러닝크루", "런트립", "운동 커뮤니티"],
+    safetyLevel: "normal",
+    coverEmoji: "🏃",
+    coverImage: "https://picsum.photos/seed/issuecast-running/720/1280",
+    facts: [
+      {
+        id: "f-running-1",
+        statement:
+          "국내에서 정기적으로 달리는 인구가 약 1,000만 명으로 추정된다는 보도가 여러 매체에서 제시됐다.",
+        sourceIds: ["s-running-1", "s-running-2"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:20:00+09:00"),
+      },
+      {
+        id: "f-running-2",
+        statement:
+          "서울 도심과 한강변에서는 러닝크루와 개인 러너가 늘며 일부 산책로 혼잡과 이용 예절 논의가 함께 나오고 있다.",
+        sourceIds: ["s-running-2"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:20:00+09:00"),
+      },
+      {
+        id: "f-running-3",
+        statement:
+          "서울시는 2026년 4월부터 10월까지 매주 목요일 저녁 ‘7979 서울 러닝크루’를 운영하며 러닝 예절과 안전을 함께 안내한다고 밝혔다.",
+        sourceIds: ["s-running-3"],
+        confidence: "fact",
+        lastCheckedAt: ISO("2026-05-07T09:20:00+09:00"),
+      },
+    ],
+    sources: [
+      {
+        id: "s-running-1",
+        title: "Korea’s running trend shows no signs of slowing in 2026",
+        publisher: "The Korea Times",
+        url: "https://www.koreatimes.co.kr/amp/southkorea/society/20260102/koreas-running-trend-shows-no-signs-of-slowing-in-2026",
+        publishedAt: ISO("2026-01-02T12:00:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:20:00+09:00"),
+        type: "news",
+      },
+      {
+        id: "s-running-2",
+        title: "Can Seoul stay runner-friendly? Complaints over crowded paths, no shirts weigh on districts",
+        publisher: "Korea JoongAng Daily",
+        url: "https://koreajoongangdaily.joins.com/news/2026-01-08/culture/lifeStyle/Can-Seoul-stay-runnerfriendly-Complaints-over-crowded-paths-no-shirts-weigh-on-districts/2493054",
+        publishedAt: ISO("2026-01-08T07:00:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:20:00+09:00"),
+        type: "news",
+      },
+      {
+        id: "s-running-3",
+        title: "7979 Seoul Running Crew Kicks Off on April 16, Promoting Runtiquette Culture",
+        publisher: "Seoul Metropolitan Government",
+        url: "https://world.seoul.go.kr/7979-seoul-running-crew-kicks-off-on-april-16-promoting-runtiquette-culture/",
+        publishedAt: ISO("2026-04-22T09:00:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:20:00+09:00"),
+        type: "official",
+      },
+    ],
+    characterAngles: [
+      {
+        characterId: "kkang",
+        lensLabel: "생활자 관점",
+        oneLiner: "돈 많이 안 들고 사람도 만나는 취미라 커진 거지",
+        viewpoint:
+          "솔직히 달리기는 시작 비용이 아주 큰 편은 아니잖아. 신발 신고 나가면 되고, 같이 뛰면 약속도 생기니까 꾸준히 하기 쉬워. 다만 사람이 많아지면 길도 같이 써야 하니까 예절 얘기가 나오는 건 당연해.",
+        opinionDisclaimer: "생활자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-running-1", "f-running-2", "f-running-3"],
+      },
+      {
+        characterId: "uncle",
+        lensLabel: "전문가 관점",
+        oneLiner: "운동이 건강 관리와 커뮤니티를 같이 맡게 된 거예요",
+        viewpoint:
+          "쉽게 말하면 러닝은 이제 운동 하나만 뜻하지 않아요. 건강을 챙기고, 사람을 만나고, 도시 공간을 쓰는 방식까지 같이 묶입니다. 그래서 러닝크루가 늘수록 개인 취미와 공공장소 이용 규칙을 함께 생각해야 해요.",
+        opinionDisclaimer: "전문가 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-running-1", "f-running-2", "f-running-3"],
+      },
+      {
+        characterId: "prof",
+        lensLabel: "트렌드 관점",
+        oneLiner: "요즘 러닝은 운동 인증이자 모임 콘텐츠야",
+        viewpoint:
+          "이건 그냥 운동이 아니라 약속 잡기 좋은 콘텐츠가 된 거야. 뛰고, 사진 찍고, 카페 가고, 다음 대회 신청하는 흐름까지 이어지거든. 그래서 러닝크루랑 런트립이 같이 뜨는 게 자연스러워 보여.",
+        opinionDisclaimer: "트렌드 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-running-1", "f-running-3"],
+      },
+      {
+        characterId: "pm",
+        lensLabel: "회의주의자 관점",
+        oneLiner: "잠깐, 인기만큼 불편도 같이 커질 수 있어",
+        viewpoint:
+          "잠깐, 근데 러닝 인구가 늘었다는 건 좋은 쪽만 있는 게 아니야. 확인할 것 하나는 같은 길을 걷는 사람, 자전거 타는 사람, 뛰는 사람이 어떻게 나눠 쓰느냐야. 서울시가 러닝 예절을 같이 말하는 것도 그 문제를 의식한 걸로 볼 수 있어.",
+        opinionDisclaimer: "회의주의자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-running-1", "f-running-2", "f-running-3"],
+      },
+    ],
+    conversationStarters: [
+      "러닝크루가 왜 이렇게 인기야?",
+      "런트립은 그냥 여행이랑 뭐가 달라?",
+      "러너가 많아지면 어떤 문제가 생겨?",
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 11. AI 워터마크와 딥페이크 표시
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    id: "issue-ai-watermark",
+    title: "AI 영상에 표시를 붙이면 딥페이크가 줄까?",
+    shortTitle: "AI 표시 규제의 한계",
+    summary:
+      "AI로 만든 이미지·영상·음성에 표시나 워터마크를 붙이는 규제가 딥페이크와 가짜 콘텐츠 대응책으로 떠오르지만, 실제 집행과 해외 서비스 적용에는 한계가 있다는 보도.",
+    whyNow:
+      "한국 AI 기본법이 2026년 1월 시행되며 생성형 AI 결과물 표시 의무가 본격화됐고, 동시에 워터마크 제거와 해외 앱을 통한 딥페이크 유통을 어떻게 막을지가 쟁점이 됐다.",
+    category: "테크",
+    publishedAt: ISO("2026-05-07T09:10:00+09:00"),
+    updatedAt: ISO("2026-05-07T09:10:00+09:00"),
+    readTimeSec: 30,
+    keywords: ["AI 워터마크", "딥페이크", "AI 기본법"],
+    safetyLevel: "sensitive",
+    coverEmoji: "🧩",
+    coverImage: "https://picsum.photos/seed/issuecast-ai-watermark/720/1280",
+    facts: [
+      {
+        id: "f-ai-watermark-1",
+        statement:
+          "한국 AI 기본법은 2026년 1월 22일부터 시행됐고, 생성형 AI로 만든 이미지·영상·음성에 표시 의무를 두는 내용이 포함됐다고 보도됐다.",
+        sourceIds: ["s-ai-watermark-1", "s-ai-watermark-2"],
+        confidence: "fact",
+        lastCheckedAt: ISO("2026-05-07T09:10:00+09:00"),
+      },
+      {
+        id: "f-ai-watermark-2",
+        statement:
+          "현실과 구분하기 어려운 딥페이크 콘텐츠에는 사람이 알아볼 수 있는 표시가 요구된다는 설명이 제시됐다.",
+        sourceIds: ["s-ai-watermark-1", "s-ai-watermark-3"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:10:00+09:00"),
+      },
+      {
+        id: "f-ai-watermark-3",
+        statement:
+          "워터마크 제거 도구와 해외 서비스 적용 범위 때문에 실제 집행에는 빈틈이 남을 수 있다는 우려가 보도됐다.",
+        sourceIds: ["s-ai-watermark-1"],
+        confidence: "reported",
+        lastCheckedAt: ISO("2026-05-07T09:10:00+09:00"),
+      },
+    ],
+    sources: [
+      {
+        id: "s-ai-watermark-1",
+        title: "Korea's groundbreaking AI law requires watermarks on generated content, but enforcement gaps remain",
+        publisher: "Korea JoongAng Daily",
+        url: "https://koreajoongangdaily.joins.com/news/2026-01-22/business/tech/Koreas-groundbreaking-AI-law-requires-watermarks-on-generated-content-but-enforcement-gaps-remain/2506349",
+        publishedAt: ISO("2026-01-22T15:51:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:10:00+09:00"),
+        type: "news",
+      },
+      {
+        id: "s-ai-watermark-2",
+        title: "South Korea: Comprehensive AI Legal Framework Takes Effect",
+        publisher: "Library of Congress",
+        url: "https://www.loc.gov/item/global-legal-monitor/2026-02-20/south-korea-comprehensive-ai-legal-framework-takes-effect/",
+        publishedAt: ISO("2026-02-20T09:00:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:10:00+09:00"),
+        type: "official",
+      },
+      {
+        id: "s-ai-watermark-3",
+        title: "South Korea’s AI Basic Act: Overview and Key Takeaways",
+        publisher: "Cooley",
+        url: "https://www.cooley.com/news/insight/2026/2026-01-27-south-koreas-ai-basic-act-overview-and-key-takeaways",
+        publishedAt: ISO("2026-01-27T09:00:00+09:00"),
+        retrievedAt: ISO("2026-05-07T09:10:00+09:00"),
+        type: "report",
+      },
+    ],
+    characterAngles: [
+      {
+        characterId: "kkang",
+        lensLabel: "생활자 관점",
+        oneLiner: "표시가 있으면 덜 속겠지만, 다 믿어도 된다는 뜻은 아니야",
+        viewpoint:
+          "솔직히 AI 표시가 있으면 보는 사람 입장에선 한 번 멈칫할 수 있지. ‘아, 이거 만든 영상이구나’ 하고 생각할 시간이 생기니까. 근데 표시가 없다고 진짜라는 뜻도 아니고, 표시가 있다고 문제가 다 사라지는 것도 아니야.",
+        opinionDisclaimer: "생활자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-ai-watermark-1", "f-ai-watermark-2", "f-ai-watermark-3"],
+      },
+      {
+        characterId: "uncle",
+        lensLabel: "전문가 관점",
+        oneLiner: "표시는 시작점이고, 집행과 교육이 같이 가야 해요",
+        viewpoint:
+          "쉽게 말하면 워터마크는 ‘이 영상은 AI가 만들었을 수 있다’는 표지판이에요. 표지판이 있으면 도움이 되지만, 표지판만으로 사고가 모두 사라지지는 않죠. 그래서 법의 범위, 플랫폼 책임, 이용자 교육이 함께 있어야 효과가 커집니다.",
+        opinionDisclaimer: "전문가 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-ai-watermark-1", "f-ai-watermark-2", "f-ai-watermark-3"],
+      },
+      {
+        characterId: "prof",
+        lensLabel: "트렌드 관점",
+        oneLiner: "앞으로는 ‘이거 AI야?’가 기본 질문이 될 거야",
+        viewpoint:
+          "이 흐름은 꽤 커질 것 같아. 예전엔 영상이면 일단 믿었는데, 이제는 ‘이거 AI로 만든 거야?’부터 묻는 분위기가 생기고 있거든. 표시 규제는 그 질문을 사람들에게 더 자주 떠올리게 만드는 장치처럼 보여.",
+        opinionDisclaimer: "트렌드 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-ai-watermark-1", "f-ai-watermark-2"],
+      },
+      {
+        characterId: "pm",
+        lensLabel: "회의주의자 관점",
+        oneLiner: "잠깐, 표시 의무가 곧바로 차단 효과는 아니야",
+        viewpoint:
+          "잠깐, 근데 워터마크를 붙인다고 딥페이크가 바로 줄어든다고 단정하긴 어려워. 확인할 것 하나는 누가 만들었고, 어느 서비스에서 퍼졌고, 법이 실제로 닿는 범위가 어디까지냐는 거야. 특히 제거 도구나 해외 앱 문제가 남으면 표시 제도만으로는 빈틈이 생길 수 있어.",
+        opinionDisclaimer: "회의주의자 렌즈의 AI 생성 의견입니다.",
+        referencedFactIds: ["f-ai-watermark-1", "f-ai-watermark-2", "f-ai-watermark-3"],
+      },
+    ],
+    conversationStarters: [
+      "AI 워터마크가 정확히 뭐야?",
+      "표시를 붙이면 딥페이크를 막을 수 있어?",
+      "해외 앱으로 만든 건 어떻게 되는 거야?",
     ],
   },
 ];
