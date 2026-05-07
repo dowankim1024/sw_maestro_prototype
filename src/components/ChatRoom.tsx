@@ -2,289 +2,314 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCharacter } from "@/lib/characters";
+import { generateCharacterReply, getAngle } from "@/lib/services";
 import {
-  buildInsight,
-  generateCharacterReply,
-  quickReactionToText,
-  startChat,
-} from "@/lib/services";
-import {
-  QUICK_REACTIONS,
-  type Character,
+  QUICK_PROMPTS,
+  quickPromptToText,
   type CharacterId,
-  type ChatInsight,
   type ChatTurn,
-  type Mood,
-  type QuickReaction,
-  type TrendIssue,
+  type Issue,
+  type QuickPrompt,
 } from "@/lib/types";
+import { DisclaimerNotice } from "./DisclaimerNotice";
+import { FactBadge } from "./FactBadge";
+import { SuggestedQuestionChips } from "./SuggestedQuestionChips";
 
-export function ChatRoom({
-  issue,
-  characterId,
-  onExit,
-  onFinish,
-}: {
-  issue: TrendIssue;
+interface Props {
+  issue: Issue;
   characterId: CharacterId;
   onExit: () => void;
-  onFinish: (insight: ChatInsight) => void;
-}) {
-  const character = getCharacter(characterId);
-  const session = useMemo(
-    () => startChat({ issue, characterId }),
-    [issue, characterId],
-  );
+  onFinish: (turns: ChatTurn[]) => Promise<void> | void;
+}
 
-  const [turns, setTurns] = useState<ChatTurn[]>(session.openingTurns);
+/**
+ * 06 §16.5 — 캐릭터 대화 화면.
+ *  - 추천 질문 칩 노출
+ *  - 사실/의견 라벨 사용
+ *  - 종료 버튼은 항상 보임
+ *  - 출처 보기 토글
+ */
+export function ChatRoom({ issue, characterId, onExit, onFinish }: Props) {
+  const character = getCharacter(characterId);
+  const angle = getAngle(issue, characterId);
+
+  const [turns, setTurns] = useState<ChatTurn[]>(() => initialTurns(issue, characterId));
   const [input, setInput] = useState("");
-  const [typing, setTyping] = useState(false);
-  const [ended, setEnded] = useState(false);
-  const [lastUserText, setLastUserText] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [pending, setPending] = useState(false);
+  const [showSources, setShowSources] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [turns, typing]);
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [turns.length]);
 
-  async function send(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || typing || ended) return;
+  const userTurnCount = useMemo(
+    () => turns.filter((t) => t.role === "user").length,
+    [turns],
+  );
+
+  async function send(rawText: string) {
+    const text = rawText.trim();
+    if (!text || pending) return;
 
     const userTurn: ChatTurn = {
       id: `u-${Date.now()}`,
       role: "user",
-      text: trimmed,
+      text,
       createdAt: new Date().toISOString(),
     };
     const next = [...turns, userTurn];
     setTurns(next);
     setInput("");
-    setLastUserText(trimmed);
-    setTyping(true);
+    setPending(true);
 
     const reply = await generateCharacterReply({
       issue,
       characterId,
-      userText: trimmed,
+      userText: text,
       history: next,
     });
 
-    const typingMs = 600 + Math.min(1400, reply.text.length * 6);
-    window.setTimeout(() => {
-      const charTurn: ChatTurn = {
-        id: `c-${Date.now()}`,
-        role: "character",
-        mood: reply.mood,
-        text: reply.text,
-        capturedFact: reply.capturedFact,
-        degraded: reply.degraded,
-        degradedReason: reply.degradedReason,
-        createdAt: new Date().toISOString(),
-      };
-      setTurns((prev) => [...prev, charTurn]);
-      setTyping(false);
-    }, typingMs);
+    const charTurn: ChatTurn = {
+      id: `c-${Date.now()}`,
+      role: "character",
+      text: reply.text,
+      degraded: reply.degraded,
+      degradedReason: reply.degradedReason,
+      createdAt: new Date().toISOString(),
+    };
+    setTurns([...next, charTurn]);
+    setPending(false);
   }
 
-  /**
-   * 마지막 사용자 발언을 그대로 다시 보낸다 (degraded 응답 재시도용).
-   * 이미 추가된 사용자 턴은 두고, 직전 캐릭터 폴백 턴만 제거한 뒤 재호출한다.
-   */
-  async function retryLastUserTurn() {
-    if (!lastUserText || typing || ended) return;
-    setTyping(true);
-
-    const trimmedHistory = (() => {
-      const last = turns[turns.length - 1];
-      if (last?.role === "character" && last.degraded) {
-        return turns.slice(0, -1);
-      }
-      return turns;
-    })();
-    setTurns(trimmedHistory);
-
-    const reply = await generateCharacterReply({
-      issue,
-      characterId,
-      userText: lastUserText,
-      history: trimmedHistory,
-    });
-
-    const typingMs = 400 + Math.min(1200, reply.text.length * 6);
-    window.setTimeout(() => {
-      const charTurn: ChatTurn = {
-        id: `c-retry-${Date.now()}`,
-        role: "character",
-        mood: reply.mood,
-        text: reply.text,
-        capturedFact: reply.capturedFact,
-        degraded: reply.degraded,
-        degradedReason: reply.degradedReason,
-        createdAt: new Date().toISOString(),
-      };
-      setTurns((prev) => [...prev, charTurn]);
-      setTyping(false);
-    }, typingMs);
+  function pickQuick(qp: QuickPrompt) {
+    const text = quickPromptToText(qp);
+    setInput(text);
   }
 
-  function handleQuick(qr: QuickReaction) {
-    send(quickReactionToText(qr));
+  async function finish() {
+    if (finishing) return;
+    setFinishing(true);
+    await onFinish(turns);
   }
-
-  async function handleEnd() {
-    if (ended) return;
-    setEnded(true);
-    const insight = await buildInsight({
-      issue,
-      characterId,
-      turns,
-    });
-    onFinish(insight);
-  }
-
-  // 인사이트 누적 미리보기 (우측 미니바에서 사용)
-  const captured = useMemo(
-    () =>
-      turns
-        .map((t) => t.capturedFact)
-        .filter((s): s is string => !!s)
-        .slice(-3),
-    [turns],
-  );
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--background-card)]">
-      {/* 상단 바 */}
-      <div className="flex items-center gap-3 border-b border-[var(--border)] p-3 sm:p-4">
+    <section className="flex h-[calc(100vh-72px)] flex-col gap-3 sm:h-[calc(100vh-88px)]">
+      {/* 상단 — 캐릭터 + 이슈 맥락 고정 바 */}
+      <header className="card-surface flex items-center gap-3 p-3 sm:p-4">
         <button
           onClick={onExit}
-          className="rounded-md border border-[var(--border)] bg-white/5 px-2.5 py-1 text-xs text-white/80 hover:text-white"
+          className="rounded-full border border-[var(--border)] bg-white px-2 py-1 text-xs text-[var(--muted)] hover:border-[var(--border-strong)]"
+          aria-label="뒤로"
         >
-          ← 나가기
+          ←
         </button>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div
-            className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base shadow-md ${character.gradient}`}
-          >
-            {character.emoji}
-          </div>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-white">
-              {character.name}{" "}
-              <span className="text-[var(--muted)]">
-                · {character.oneLiner}
-              </span>
-            </div>
-            <div className="line-clamp-1 text-[11px] text-[var(--muted)]">
-              {issue.title}
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={handleEnd}
-          className="rounded-md bg-white/10 px-2.5 py-1 text-xs text-white/90 hover:bg-white/15"
+
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-base shadow-sm ${character.gradient}`}
+          aria-hidden
         >
-          오늘은 여기까지
+          <span className="rounded-full bg-white/85 px-1.5 py-[2px]">
+            {character.emoji}
+          </span>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h2 className="truncate text-sm font-bold text-[var(--foreground)]">
+              {character.name}
+            </h2>
+            <span className="rounded-full border border-[var(--border-strong)] bg-[var(--background)] px-2 py-[1px] text-[10px] font-semibold text-[var(--muted)]">
+              {character.tone}
+            </span>
+          </div>
+          <p className="truncate text-[11px] text-[var(--muted)]">
+            #{issue.category} · {issue.shortTitle}
+          </p>
+        </div>
+
+        <button
+          onClick={finish}
+          disabled={finishing || userTurnCount < 1}
+          className="shrink-0 rounded-xl border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--foreground)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {finishing ? "정리 중…" : "오늘 새로 본 것"}
+        </button>
+      </header>
+
+      {/* 면책 + 출처 토글 */}
+      <div className="flex flex-col gap-2 px-1 sm:flex-row sm:items-center sm:gap-3">
+        <DisclaimerNotice issue={issue} size="sm" className="flex-1" />
+        <button
+          onClick={() => setShowSources((v) => !v)}
+          className="shrink-0 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-[11px] font-semibold text-[var(--muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+        >
+          {showSources ? "출처 닫기" : `출처 ${issue.sources.length}건 보기`}
         </button>
       </div>
 
-      {/* 인사이트 미리보기 (옵션) */}
-      {captured.length > 0 && (
-        <div className="border-b border-[var(--border)] bg-[var(--background-elev)]/60 px-4 py-2 text-[11px] text-[var(--muted)]">
-          오늘 짚은 포인트 ·{" "}
-          <span className="text-white/85">{captured.join(" / ")}</span>
+      {showSources && (
+        <div className="card-surface space-y-2 p-3">
+          {issue.sources.map((s) => (
+            <a
+              key={s.id}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-[12px] hover:border-[var(--accent)]"
+            >
+              <span className="font-semibold text-[var(--foreground)]">
+                {s.title}
+              </span>
+              <span className="ml-2 text-[var(--muted)]">{s.publisher}</span>
+            </a>
+          ))}
         </div>
       )}
 
       {/* 메시지 영역 */}
       <div
         ref={scrollRef}
-        className="flex-1 space-y-4 overflow-y-auto p-3 sm:p-5"
+        className="card-surface flex-1 overflow-y-auto p-3 sm:p-4"
       >
-        {turns.map((t, idx) => {
-          const isLastCharTurn =
-            t.role === "character" && idx === turns.length - 1;
-          return (
-            <Bubble
-              key={t.id}
-              turn={t}
-              character={character}
-              onRetry={
-                isLastCharTurn && t.degraded && !typing && !ended
-                  ? retryLastUserTurn
-                  : undefined
-              }
+        <div className="space-y-3">
+          {/* 캐릭터 시작 카드 (관점 미리보기) */}
+          {angle && (
+            <CharacterAngleBubble
+              characterName={character.name}
+              avatarGradient={character.gradient}
+              avatarEmoji={character.emoji}
+              oneLiner={angle.oneLiner}
+              viewpoint={angle.viewpoint}
+              opinionDisclaimer={angle.opinionDisclaimer}
             />
-          );
-        })}
-        {typing && <TypingBubble character={character} />}
-      </div>
-
-      {/* 퀵 리액션 + 입력 */}
-      <div className="border-t border-[var(--border)] bg-[var(--background-elev)] p-3 sm:p-4">
-        {/* 사용자가 아직 입력 안 했으면 conversationStarters 추천 */}
-        {!turns.some((t) => t.role === "user") &&
-          issue.conversationStarters &&
-          issue.conversationStarters.length > 0 && (
-            <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
-              {issue.conversationStarters.slice(0, 3).map((q, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => send(q)}
-                  disabled={typing || ended}
-                  className="shrink-0 rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-3 py-1.5 text-[12px] text-white/95 transition hover:border-[var(--accent)]/70 disabled:opacity-40"
-                >
-                  💬 {q}
-                </button>
-              ))}
-            </div>
           )}
 
-        <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          {QUICK_REACTIONS.map((qr) => (
-            <button
-              key={qr}
-              type="button"
-              onClick={() => handleQuick(qr)}
-              disabled={typing || ended}
-              className="shrink-0 rounded-full border border-[var(--border)] bg-white/5 px-3 py-1.5 text-[12px] text-white/85 transition hover:border-white/20 hover:text-white disabled:opacity-40"
-            >
-              {qr}
-            </button>
+          {turns.map((t) => (
+            <Bubble key={t.id} turn={t} characterName={character.name} characterGradient={character.gradient} characterEmoji={character.emoji} />
           ))}
-        </div>
 
-        <div className="flex items-end gap-2">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                send(input);
-              }
-            }}
-            disabled={typing || ended}
-            rows={1}
-            placeholder={
-              ended
-                ? "오늘 대화는 마무리됐어요."
-                : "편하게 한 줄 던져보세요. (Enter 전송)"
-            }
-            className="min-h-[44px] w-full resize-none rounded-xl border border-[var(--border)] bg-[var(--background-card)] p-3 text-sm text-white placeholder:text-[var(--muted)] focus:border-[var(--accent)]/60 focus:outline-none disabled:opacity-50"
-          />
-          <button
-            onClick={() => send(input)}
-            disabled={typing || ended || !input.trim()}
-            className="h-[44px] rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-white shadow-[0_8px_24px_-8px_rgba(255,77,109,0.7)] transition hover:bg-[#ff6680] disabled:opacity-40"
-          >
-            보내기
-          </button>
+          {pending && <Typing characterName={character.name} characterEmoji={character.emoji} characterGradient={character.gradient} />}
         </div>
+      </div>
+
+      {/* 추천 질문 칩 (사용자 발화 전에만 추천) */}
+      {userTurnCount === 0 && (
+        <SuggestedQuestionChips
+          questions={issue.conversationStarters}
+          onPick={(q) => send(q)}
+          label="이렇게 물어볼래?"
+          disabled={pending}
+          className="px-1"
+        />
+      )}
+
+      {/* 빠른 프롬프트 */}
+      <div className="flex flex-wrap gap-1.5 px-1">
+        {QUICK_PROMPTS.map((qp) => (
+          <button
+            key={qp}
+            type="button"
+            disabled={pending}
+            onClick={() => pickQuick(qp)}
+            className="rounded-full border border-[var(--border)] bg-white px-2.5 py-1 text-[11px] font-medium text-[var(--muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {qp}
+          </button>
+        ))}
+      </div>
+
+      {/* 입력 */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          send(input);
+        }}
+        className="card-surface flex items-end gap-2 p-2"
+      >
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send(input);
+            }
+          }}
+          placeholder={`${character.name}에게 던져보세요. (Enter로 전송)`}
+          rows={1}
+          className="max-h-32 min-h-[40px] flex-1 resize-none rounded-xl border border-[var(--border)] bg-[var(--background-elev)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--accent)]"
+        />
+        <button
+          type="submit"
+          disabled={pending || !input.trim()}
+          className="rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#d44141] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {pending ? "…" : "보내기"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub components
+// ---------------------------------------------------------------------------
+
+function initialTurns(issue: Issue, characterId: CharacterId): ChatTurn[] {
+  const character = getCharacter(characterId);
+  const now = new Date().toISOString();
+  return [
+    {
+      id: `sys-${Date.now()}`,
+      role: "system",
+      text: `‘${issue.shortTitle}’에 대해 ${character.name}의 시각으로 가볍게 이야기 나눠요. 30초로 끝나도 좋고, 더 묻고 싶으면 이어가도 돼요.`,
+      createdAt: now,
+    },
+  ];
+}
+
+function CharacterAngleBubble({
+  characterName,
+  avatarGradient,
+  avatarEmoji,
+  oneLiner,
+  viewpoint,
+  opinionDisclaimer,
+}: {
+  characterName: string;
+  avatarGradient: string;
+  avatarEmoji: string;
+  oneLiner: string;
+  viewpoint: string;
+  opinionDisclaimer: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <Avatar gradient={avatarGradient} emoji={avatarEmoji} />
+      <div className="max-w-[85%] space-y-2">
+        <div className="rounded-2xl rounded-tl-md border border-[var(--border)] bg-white px-4 py-3 shadow-sm">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px]">
+            <span className="font-semibold text-[var(--foreground)]">
+              {characterName}
+            </span>
+            <FactBadge kind="opinion" />
+          </div>
+          <p className="text-[14px] font-semibold leading-snug text-[var(--foreground)]">
+            “{oneLiner}”
+          </p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--foreground)]/85">
+            {viewpoint}
+          </p>
+        </div>
+        <p className="px-1 text-[11px] italic text-[var(--muted)]">
+          {opinionDisclaimer}
+        </p>
       </div>
     </div>
   );
@@ -292,127 +317,100 @@ export function ChatRoom({
 
 function Bubble({
   turn,
-  character,
-  onRetry,
+  characterName,
+  characterGradient,
+  characterEmoji,
 }: {
   turn: ChatTurn;
-  character: Character;
-  /** 정의되어 있으면 degraded 안내 하단에 '다시 보내볼까?' 버튼 노출 */
-  onRetry?: () => void;
+  characterName: string;
+  characterGradient: string;
+  characterEmoji: string;
 }) {
   if (turn.role === "system") {
     return (
-      <div className="mx-auto max-w-md rounded-xl border border-dashed border-[var(--border)] bg-white/5 px-3 py-2 text-center text-[11px] text-[var(--muted)]">
+      <div className="mx-auto max-w-md rounded-xl border border-dashed border-[var(--border)] bg-[var(--background)]/50 px-3 py-2 text-center text-[11px] text-[var(--muted)]">
         {turn.text}
       </div>
     );
   }
-  const isUser = turn.role === "user";
-  const showDegraded = !isUser && turn.degraded === true;
+  if (turn.role === "user") {
+    return (
+      <div className="flex justify-end">
+        <div className="max-w-[80%] rounded-2xl rounded-tr-md bg-[var(--accent)] px-4 py-2.5 text-[14px] leading-relaxed text-white shadow-sm">
+          {turn.text}
+        </div>
+      </div>
+    );
+  }
   return (
-    <div
-      className={`fade-up flex w-full ${isUser ? "justify-end" : "justify-start"}`}
-    >
-      <div className="flex max-w-[88%] gap-2 sm:max-w-[78%]">
-        {!isUser && (
-          <div
-            className={`mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base shadow-md ${character.gradient}`}
-            aria-label={character.name}
-          >
-            {character.emoji}
-          </div>
-        )}
+    <div className="flex items-start gap-2">
+      <Avatar gradient={characterGradient} emoji={characterEmoji} />
+      <div className="max-w-[85%] space-y-1">
         <div
-          className={[
-            "rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed whitespace-pre-wrap",
-            isUser
-              ? "bg-[var(--accent)]/15 border border-[var(--accent)]/30 text-white"
-              : showDegraded
-                ? "bg-white/5 border border-amber-400/30 text-white/90"
-                : "bg-white/5 border border-[var(--border)] text-white/90",
-          ].join(" ")}
+          className={`rounded-2xl rounded-tl-md border px-4 py-2.5 text-[14px] leading-relaxed shadow-sm ${
+            turn.degraded
+              ? "border-amber-300/70 bg-amber-50 text-[var(--foreground)]"
+              : "border-[var(--border)] bg-white text-[var(--foreground)]"
+          }`}
         >
-          <div className="mb-1 flex items-center gap-2 text-[10px] text-[var(--muted)]">
-            <span>{isUser ? "나" : character.shortName}</span>
-            {!isUser && turn.mood && <MoodTag mood={turn.mood} />}
-          </div>
-          <div>{turn.text}</div>
-          {showDegraded && (
-            <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-amber-400/20 pt-2 text-[11px]">
-              <span className="inline-flex items-center gap-1 text-amber-200/90">
-                <span aria-hidden>⚠️</span>
-                <span>지금 잠깐 혼잡해서 임시 답변이에요.</span>
+          <div className="mb-1 flex items-center gap-1.5 text-[11px]">
+            <span className="font-semibold text-[var(--foreground)]">
+              {characterName}
+            </span>
+            <FactBadge kind="opinion" />
+            {turn.degraded && (
+              <span className="rounded-full bg-amber-100 px-1.5 py-[1px] text-[10px] text-amber-800">
+                임시 답변
               </span>
-              {onRetry && (
-                <button
-                  type="button"
-                  onClick={onRetry}
-                  className="rounded-full border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[11px] font-medium text-amber-100 transition hover:border-amber-300/70 hover:bg-amber-400/20"
-                >
-                  다시 보내볼까?
-                </button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+          <p className="whitespace-pre-line">{turn.text}</p>
         </div>
       </div>
     </div>
   );
 }
 
-function MoodTag({ mood }: { mood: Mood }) {
-  const map: Record<
-    Mood,
-    { label: string; color: string }
-  > = {
-    공감: {
-      label: "공감",
-      color: "bg-rose-400/15 text-rose-200 border-rose-400/30",
-    },
-    시각공유: {
-      label: "다른 시각",
-      color: "bg-cyan-400/15 text-cyan-200 border-cyan-400/30",
-    },
-    지식체크: {
-      label: "디테일 보태기",
-      color: "bg-amber-400/15 text-amber-200 border-amber-400/30",
-    },
-  };
-  const m = map[mood];
+function Avatar({ gradient, emoji }: { gradient: string; emoji: string }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium ${m.color}`}
+      aria-hidden
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br shadow-sm ${gradient}`}
     >
-      {m.label}
+      <span className="rounded-full bg-white/85 px-1 py-[1px] text-[12px]">
+        {emoji}
+      </span>
     </span>
   );
 }
 
-function TypingBubble({ character }: { character: Character }) {
+function Typing({
+  characterName,
+  characterEmoji,
+  characterGradient,
+}: {
+  characterName: string;
+  characterEmoji: string;
+  characterGradient: string;
+}) {
   return (
-    <div className="flex w-full justify-start">
-      <div className="flex gap-2">
-        <div
-          className={`mt-1 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br text-base shadow-md ${character.gradient}`}
-        >
-          {character.emoji}
-        </div>
-        <div className="rounded-2xl border border-[var(--border)] bg-white/5 px-4 py-2.5 text-sm text-white/80">
-          <span className="inline-flex items-center gap-1">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/70" />
-            <span
-              className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/70"
-              style={{ animationDelay: "120ms" }}
-            />
-            <span
-              className="h-1.5 w-1.5 animate-pulse rounded-full bg-white/70"
-              style={{ animationDelay: "240ms" }}
-            />
-          </span>
-          <span className="ml-2 text-[var(--muted)]">
-            {character.shortName} 입력 중…
-          </span>
-        </div>
+    <div className="flex items-start gap-2">
+      <Avatar gradient={characterGradient} emoji={characterEmoji} />
+      <div className="rounded-2xl rounded-tl-md border border-[var(--border)] bg-white px-4 py-2 text-[12px] text-[var(--muted)] shadow-sm">
+        <span className="font-semibold text-[var(--foreground)]">
+          {characterName}
+        </span>
+        <span className="ml-2 inline-flex gap-0.5">
+          <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--muted-2)]" />
+          <span
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--muted-2)]"
+            style={{ animationDelay: "120ms" }}
+          />
+          <span
+            className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--muted-2)]"
+            style={{ animationDelay: "240ms" }}
+          />
+        </span>
       </div>
     </div>
   );

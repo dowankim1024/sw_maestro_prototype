@@ -1,246 +1,298 @@
-export type Sentiment = "positive" | "neutral" | "negative" | "controversial";
+/**
+ * 이슈캐스트 데이터 모델 v2.
+ *
+ * 06-prototype.md (§10, §11) 기준.
+ * 핵심 원칙:
+ *   - 사실(Fact)과 캐릭터 의견(Angle/Opinion)을 분리한다.
+ *   - 모든 이슈에는 최소 2개 이상의 출처가 있어야 한다.
+ *   - 위험도(safetyLevel)에 따라 면책 문구 강도를 다르게 한다.
+ *   - 점수·등급·랭킹·찬반 토론 필드는 두지 않는다.
+ */
 
-export type SourceType = "news" | "community" | "social" | "search" | "rss";
-
-export type AudienceAge = "20대" | "30대";
+// ---------------------------------------------------------------------------
+// CATEGORY
+// ---------------------------------------------------------------------------
 
 export type IssueCategory =
-  | "정치/사회"
   | "경제"
+  | "사회"
   | "테크"
-  | "문화/연예"
-  | "스포츠"
-  | "커뮤니티"
+  | "문화"
+  | "정치"
   | "글로벌";
 
-export type Category = AudienceAge | "전체" | IssueCategory;
-
-// 필터 탭 노출 순서: 연령(20대 → 30대) → 전체 → 도메인
-export const CATEGORIES: Category[] = [
-  "20대",
-  "30대",
-  "전체",
-  "정치/사회",
+export const ISSUE_CATEGORIES: IssueCategory[] = [
   "경제",
+  "사회",
   "테크",
-  "문화/연예",
-  "스포츠",
-  "커뮤니티",
+  "문화",
+  "정치",
   "글로벌",
 ];
 
 export interface CategoryMeta {
   emoji: string;
   caption: string;
-  /** 칩 그라데이션 (Tailwind from/via/to) */
-  gradient: string;
 }
 
-export const CATEGORY_META: Record<Category, CategoryMeta> = {
-  "20대": {
-    emoji: "🧃",
-    caption: "취업·연애·관심사",
-    gradient: "from-fuchsia-500/40 via-rose-500/30 to-orange-400/30",
-  },
-  "30대": {
-    emoji: "🍵",
-    caption: "일·돈·살림 이야기",
-    gradient: "from-cyan-500/40 via-sky-500/30 to-indigo-500/30",
-  },
-  전체: {
-    emoji: "🌐",
-    caption: "지금 뜨는 모든 이슈",
-    gradient: "from-slate-500/40 via-slate-500/20 to-slate-400/10",
-  },
-  "정치/사회": {
-    emoji: "🏛️",
-    caption: "정책·사회 변화",
-    gradient: "from-rose-500/40 via-rose-500/20 to-amber-400/20",
-  },
-  경제: {
-    emoji: "📈",
-    caption: "물가·산업·일자리",
-    gradient: "from-emerald-500/40 via-teal-500/20 to-cyan-500/20",
-  },
-  테크: {
-    emoji: "🛰️",
-    caption: "AI·플랫폼·디지털",
-    gradient: "from-indigo-500/40 via-violet-500/30 to-fuchsia-500/30",
-  },
-  "문화/연예": {
-    emoji: "🎬",
-    caption: "콘텐츠·셀럽·트렌드",
-    gradient: "from-pink-500/40 via-rose-500/30 to-amber-400/20",
-  },
-  스포츠: {
-    emoji: "⚽",
-    caption: "리그·이적·국가대표",
-    gradient: "from-sky-500/40 via-blue-500/30 to-emerald-500/20",
-  },
-  커뮤니티: {
-    emoji: "💬",
-    caption: "익명 게시판·밈",
-    gradient: "from-amber-500/40 via-orange-500/30 to-rose-500/20",
-  },
-  글로벌: {
-    emoji: "🌏",
-    caption: "해외·국제정세",
-    gradient: "from-blue-500/40 via-indigo-500/30 to-purple-500/20",
-  },
+export const CATEGORY_META: Record<IssueCategory, CategoryMeta> = {
+  경제: { emoji: "📈", caption: "물가·소비·산업" },
+  사회: { emoji: "🏘️", caption: "정책·생활·노동" },
+  테크: { emoji: "🤖", caption: "AI·플랫폼·디지털" },
+  문화: { emoji: "🎬", caption: "콘텐츠·트렌드" },
+  정치: { emoji: "🏛️", caption: "정부·국회·정책" },
+  글로벌: { emoji: "🌏", caption: "해외·국제 정세" },
 };
 
-export interface IssueSource {
-  /** 내부 보관용. UI에는 노출하지 않음 */
-  name: string;
-  type: SourceType;
+// ---------------------------------------------------------------------------
+// SAFETY
+// ---------------------------------------------------------------------------
+
+/**
+ * 위험도 분류 (06-prototype.md §12.5).
+ *  - normal: 일반 트렌드·생활 이슈
+ *  - sensitive: 정치·젠더·종교·노사 등 사회 갈등 이슈
+ *  - highRisk: 명예훼손·수사·재판·의료/금융 위험 이슈 (MVP 발행 보류)
+ */
+export type SafetyLevel = "normal" | "sensitive" | "highRisk";
+
+// ---------------------------------------------------------------------------
+// SOURCE
+// ---------------------------------------------------------------------------
+
+export type SourceType = "news" | "official" | "report" | "data" | "other";
+
+export interface Source {
+  id: string;
+  title: string;
+  publisher: string;
   url: string;
   publishedAt: string;
+  retrievedAt: string;
+  type: SourceType;
 }
 
-/**
- * 관점(Perspective).
- * v3에서는 ‘찬성/반대’ 라벨을 쓰지 않는다. 항상 둘 이상의 ‘시각’만 있다.
- */
-export interface Perspective {
-  /** 예: "이렇게 보는 사람들" */
-  label: string;
-  points: string[];
-}
+// ---------------------------------------------------------------------------
+// FACT
+// ---------------------------------------------------------------------------
 
-export interface TrendIssue {
+/** 사실 라벨 (06 §11.3). UI 라벨용 키. */
+export type FactLabel = "fact" | "reported" | "uncertain";
+
+export interface IssueFact {
   id: string;
-  rank: number;
-  title: string;
-  category: IssueCategory;
-  /** 카드/슬라이드용 한 줄 후킹 */
-  oneLine: string;
-  /** 좀 더 길게 한 단락 요약 */
-  summary: string;
-  whyTrending: string;
-  trendScore: number;
-  mentionCount: number;
-  growthRate: number;
-  sentiment: Sentiment;
-  /** 0~100. UI에 ‘논쟁성’이라는 단어로는 노출하지 않는다. */
-  buzzScore: number;
-  keywords: string[];
-  audienceAge: AudienceAge[];
-  imageSeed: string;
-  coverEmoji: string;
-  sources: IssueSource[];
-  /** 항상 2개의 시각. 단어는 중립적. */
-  perspectives: [Perspective, Perspective];
-  /** 대화에서 다룰 수 있는 핵심 포인트 3개 (issue.md 가이드 기준) */
-  keyPoints: string[];
-  /** 사용자가 캐릭터에게 던질 만한 진입 질문 3개 (얕음 → 깊음) */
-  conversationStarters: string[];
+  /** 한 문장. 단정 표현 회피. */
+  statement: string;
+  /** 어떤 출처에서 확인되었는지 */
+  sourceIds: string[];
+  /** 신뢰 단계. UI 라벨로 그대로 노출된다. */
+  confidence: FactLabel;
+  lastCheckedAt: string;
 }
 
-// === 캐릭터 ===
-export type CharacterId = "kkang" | "uncle" | "prof" | "pm";
+// ---------------------------------------------------------------------------
+// CHARACTER
+// ---------------------------------------------------------------------------
+
 /**
- * 페르소나 매칭 톤. prompt/character_*.md 의 비교표 기준.
- * - 가벼움 (Light): 깡깡녀
- * - 친근함 (Friendly): 옆집 아재
- * - 깊이 (Depth): 교수님
- * - 스마트 (Smart): MZ 인턴
- *
- * 주의: 캐릭터 id 'pm'은 호환성 위해 유지하지만 의미는 'MZ 인턴'으로 재정의됨.
+ * 캐릭터 ID.
+ * 호환성을 위해 기존 storage 키(`kkang`/`uncle`/`prof`/`pm`)를 유지하되,
+ * 의미는 06-prototype.md §9.2 기준으로 재정의한다.
+ *  - kkang  → 깡깡녀 (생활 체감형 친구)
+ *  - uncle  → 옆집 아재 (경험담 기반 현실 해설자)
+ *  - prof   → 교수님 (개념 정리형 설명자)
+ *  - pm     → 국무총리 (정책·공공 관점 해설자)
  */
-export type CharacterTone = "가벼움" | "친근함" | "깊이" | "스마트";
+export type CharacterId = "kkang" | "uncle" | "prof" | "pm";
+
+export const CHARACTER_IDS: CharacterId[] = ["kkang", "uncle", "prof", "pm"];
+
+export type CharacterTone = "생활" | "현실" | "개념" | "공공";
 
 export interface Character {
   id: CharacterId;
   name: string;
   shortName: string;
-  oneLiner: string;
+  /** 어떤 시각으로 이슈를 보는지 한 줄 */
+  lens: string;
+  /** 캐릭터 한 줄 소개 */
   description: string;
+  /** 톤 라벨 (UI 칩에 사용) */
+  tone: CharacterTone;
   emoji: string;
   /** Tailwind from/via/to */
   gradient: string;
-  tone: CharacterTone;
+  /** 캐릭터 시그니처 표현 일부. UI 미리보기용. */
+  signaturePhrases: string[];
 }
 
-// === 대화 ===
-export type ChatRole = "user" | "character" | "system";
+// ---------------------------------------------------------------------------
+// CHARACTER ANGLE (이슈에 대한 캐릭터 관점)
+// ---------------------------------------------------------------------------
 
-export type Mood = "공감" | "시각공유" | "지식체크";
+/**
+ * 같은 이슈를 캐릭터별로 어떻게 보는가.
+ * 06-prototype.md §10.4. 캐릭터 의견은 `referencedFactIds`로 항상 사실에 연결된다.
+ */
+export interface CharacterAngle {
+  characterId: CharacterId;
+  /** 캐릭터별 시각 라벨 (예: "내 지갑 관점") */
+  lensLabel: string;
+  /** 한 줄 관점 (30자 내외) */
+  oneLiner: string;
+  /** 3~4줄 설명. 캐릭터 톤. */
+  viewpoint: string;
+  /** 의견임을 명시하는 짧은 면책 한 줄 */
+  opinionDisclaimer: string;
+  /** 이 관점이 어떤 사실 위에 얹힌 것인지 */
+  referencedFactIds: string[];
+}
+
+// ---------------------------------------------------------------------------
+// ISSUE
+// ---------------------------------------------------------------------------
+
+export interface Issue {
+  id: string;
+  /** 본 제목. 자극적이지 않게. */
+  title: string;
+  /** 30자 이내 짧은 제목 (홈 카드용) */
+  shortTitle: string;
+  /** 한 줄 요약 */
+  summary: string;
+  /** 왜 지금 뜨는지 한 단락 */
+  whyNow: string;
+  category: IssueCategory;
+  publishedAt: string;
+  updatedAt: string;
+  /** 30초 소비 기준 */
+  readTimeSec: 30;
+  keywords: string[];
+
+  facts: IssueFact[];
+  sources: Source[];
+  characterAngles: CharacterAngle[];
+  /** 사용자가 캐릭터에게 던질 만한 진입 질문 (얕음 → 깊음) */
+  conversationStarters: string[];
+
+  safetyLevel: SafetyLevel;
+  /** 카드 커버용 이모지 */
+  coverEmoji: string;
+  /** 릴스 모드 표지 배경 이미지 (선택) */
+  coverImage?: string;
+}
+
+// ---------------------------------------------------------------------------
+// REACTION (06 §14.2)
+// ---------------------------------------------------------------------------
+
+export type ReactionKind =
+  | "like"
+  | "dislike"
+  | "newToMe"
+  | "moreCurious"
+  | "loveCharacter"
+  | "tryAnother";
+
+export const REACTION_LABELS: Record<ReactionKind, string> = {
+  like: "좋아요",
+  dislike: "별로예요",
+  newToMe: "새로 알았어요",
+  moreCurious: "더 궁금해요",
+  loveCharacter: "이 캐릭터 좋아요",
+  tryAnother: "다른 캐릭터로 볼래요",
+};
+
+export interface Reaction {
+  id: string;
+  issueId: string;
+  /** 캐릭터에 대한 반응이면 캐릭터 id, 이슈 자체에 대한 반응이면 undefined */
+  characterId?: CharacterId;
+  kind: ReactionKind;
+  createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// CHAT
+// ---------------------------------------------------------------------------
+
+export type ChatRole = "user" | "character" | "system";
 
 export interface ChatTurn {
   id: string;
   role: ChatRole;
   text: string;
-  /** role === 'character' 일 때만 의미 있음 */
-  mood?: Mood;
-  /** 이번 턴에서 인사이트로 잡힌 한 줄 (선택) */
-  capturedFact?: string;
-  /**
-   * LLM 호출이 실패해 폴백 응답이 사용된 경우.
-   * UI 에서 "지금 잠깐 혼잡해서 임시 답변이에요" 안내를 표시한다.
-   */
+  /** 폴백 답변 여부 (LLM 실패 시 true) */
   degraded?: boolean;
-  /** 폴백 사유 코드 (예: 'request_failed' | 'incomplete_response' | 'network_error'). 디버그용. */
   degradedReason?: string;
   createdAt: string;
 }
 
-export interface ChatSession {
-  id: string;
-  issueId: string;
-  characterId: CharacterId;
-  startedAt: string;
-}
+// ---------------------------------------------------------------------------
+// INSIGHT CARD ("오늘 새로 본 것")
+// ---------------------------------------------------------------------------
 
-/** 04-prototype 카드 스키마의 한 항목 */
 export interface KeyTakeaway {
   concept: string;
   explanation: string;
+  /** 사실 ID (있을 때만) */
+  sourceFactIds?: string[];
 }
 
-export interface ChatInsight {
+export interface InsightCard {
   id: string;
   issueId: string;
   issueTitle: string;
   characterId: CharacterId;
   characterName: string;
-
-  // === 04-prototype 카드 스키마 (LLM 생성) ===
-  /** 카드 헤드라인. 30자 이내, 학습 성취감 톤 */
-  headline?: string;
-  /** 핵심 3가지 (개념 + 짧은 설명) */
-  keyTakeaways?: KeyTakeaway[];
-  /** 사용자가 대화 중 보여준 좋은 관찰·질문 한 문장 */
-  userInsight?: string;
-  /** 다음에 더 알면 재밌을 지점 한 문장 */
-  nextCuriosity?: string;
-  /** SNS 공유용 캐릭터 톤 한 줄 */
-  shareableQuote?: string;
-  /** 대화 시간 또는 턴 수 */
-  duration?: string;
-
-  // === 기존 카드 (LLM 실패 시 폴백 + 보조 표시) ===
-  newlyLearned: string[]; // 2~3
-  alreadyKnew: string[]; // 1~2
-  wantToExplore: string[]; // 1~2
-  characterClosing: string;
-
-  /** 내부 사용용 (히스토리 다시 보기) */
+  /** 짧은 헤드라인 (30자 이내) */
+  headline: string;
+  keyTakeaways: KeyTakeaway[];
+  /** 사용자가 던진 좋은 관찰·질문 한 문장 */
+  userInsight: string;
+  /** 다음에 더 궁금해할 만한 지점 */
+  nextCuriosity: string;
+  /** 캐릭터 톤의 공유용 한 줄 */
+  shareableQuote: string;
+  /** 대화 길이 (분 또는 턴 수) */
+  duration: string;
+  /** 폴백 카드 여부 (LLM 실패 시 true) */
+  degraded?: boolean;
+  /** 원본 대화 내역 (다시 보기) */
   turns: ChatTurn[];
   createdAt: string;
 }
 
-// 자주 사용하는 빠른 응답 (텍스트 입력 부담 ↓)
-export type QuickReaction =
-  | "좀 더 쉽게"
-  | "예시 하나만"
-  | "한 줄로 요약"
-  | "나는 좀 다르게 봐"
-  | "공감돼";
+// ---------------------------------------------------------------------------
+// QUICK REACTIONS (대화 중 빠른 입력)
+// ---------------------------------------------------------------------------
 
-export const QUICK_REACTIONS: QuickReaction[] = [
-  "좀 더 쉽게",
+export type QuickPrompt =
+  | "더 쉽게"
+  | "예시 하나만"
+  | "한 줄로"
+  | "왜 그런 건지"
+  | "다른 시각도";
+
+export const QUICK_PROMPTS: QuickPrompt[] = [
+  "더 쉽게",
   "예시 하나만",
-  "한 줄로 요약",
-  "나는 좀 다르게 봐",
-  "공감돼",
+  "한 줄로",
+  "왜 그런 건지",
+  "다른 시각도",
 ];
+
+export function quickPromptToText(qp: QuickPrompt): string {
+  switch (qp) {
+    case "더 쉽게":
+      return "방금 그거, 좀 더 쉽게 설명해줄래?";
+    case "예시 하나만":
+      return "이해되게 예시 하나만 들어줘.";
+    case "한 줄로":
+      return "이 이슈를 한 줄로 정리해줘.";
+    case "왜 그런 건지":
+      return "그게 왜 그런 건지 좀 더 풀어줘.";
+    case "다른 시각도":
+      return "다르게 보는 사람들은 어떻게 봐?";
+  }
+}

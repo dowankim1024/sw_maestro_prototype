@@ -1,58 +1,79 @@
 import type { Character, CharacterId } from "./types";
 
 /**
- * 4종 페르소나. prompt/character_*.md 의 캐릭터 한 줄 정의 + 매칭 톤 기준.
+ * 4종 캐릭터.
+ * 06-prototype.md §9.2 정의를 그대로 반영한다.
  *
- * 호환성 유지: 캐릭터 id 'pm' 은 그대로 두되 의미를 '국무총리' → 'MZ 인턴' 으로 교체했다.
- * (사용자 storage·세션에 저장돼 있을 수 있는 id 깨짐을 막기 위함.)
+ * id 호환성:
+ *   - 'pm' id 는 storage 호환 위해 유지하되, 의미는 '국무총리'.
  */
 export const CHARACTERS: Character[] = [
   {
     id: "kkang",
     name: "깡깡녀",
     shortName: "깡깡녀",
-    oneLiner: "20대 친구처럼 가볍게 같이 떠들기",
+    lens: "그래서 내 일상에 무슨 영향 있는데?",
     description:
-      "예능 출연자 톤의 20대 여성. 시사·전문 지식은 얕지만 자기 직감과 친구·SNS에서 들은 얘기로 친근하게 풀어준다. ㅋㅋ·물결~ 자연스러운 친구 톤.",
-    emoji: "🔥",
+      "20대 친구처럼 빠르고 가볍게 풀어주는 생활 체감형. 어려운 말은 자르고 ‘이게 내 지갑·시간·관계에 어떻게 닿는지’부터 본다.",
+    tone: "생활",
+    emoji: "🎀",
     gradient: "from-rose-500 via-pink-500 to-orange-400",
-    tone: "가벼움",
+    signaturePhrases: [
+      "어 잠깐, 그건 좀 다르게 들었는데??",
+      "그래서 결론은 내 지갑 얘기잖아 ㅋㅋ",
+    ],
   },
   {
     id: "uncle",
     name: "옆집 아재",
     shortName: "아재",
-    oneLiner: "동네 형이 단톡방·유튜브로 풀어주는 톤",
+    lens: "살아보면 이런 건 분위기랑 같이 움직여",
     description:
-      "40~50대 동네 아저씨 톤. 단톡방·유튜브에서 들은 얘기를 자기 경험과 섞어 친근하게 풀어준다. 살짝 꼰대지만 악의는 없고, 사용자에게 직접 향하는 비하는 없다.",
+      "동네 형 톤의 경험담 기반 현실 해설자. 시장 심리·돈 흐름·실생활 사례를 친근하게 엮어 풀어준다.",
+    tone: "현실",
     emoji: "🍵",
     gradient: "from-amber-500 via-orange-500 to-rose-400",
-    tone: "친근함",
+    signaturePhrases: [
+      "그렇게만 보면 좀 놓치는 게 있어",
+      "나 살아보니까 이런 건 결국 분위기야",
+    ],
   },
   {
     id: "prof",
     name: "교수님",
     shortName: "교수님",
-    oneLiner: "정제된 어투로 본질까지 한 단계 더",
+    lens: "이걸 이해하려면 구조와 개념을 봐야 해요",
     description:
-      "50~60대 남성 교수 톤. 차분하고 정제된 어투로 사용자의 발언을 이슈의 본질로 연결해준다. 새 개념·비교 지점을 부드럽게 던져 한 단계 깊이 알게 한다.",
+      "차분하고 정제된 어투의 개념 정리형 설명자. 용어와 원인, 인과 구조를 한 단계 깊이 정돈해준다.",
+    tone: "개념",
     emoji: "🎓",
     gradient: "from-cyan-500 via-sky-500 to-indigo-500",
-    tone: "깊이",
+    signaturePhrases: [
+      "그 부분은 알려진 사실과 조금 다릅니다",
+      "핵심은 기대 심리가 가격에 먼저 반영된다는 점이에요",
+    ],
   },
   {
     id: "pm",
-    name: "MZ 인턴",
-    shortName: "MZ 인턴",
-    oneLiner: "시큰둥하지만 정확한 IT 동료",
+    name: "국무총리",
+    shortName: "총리",
+    lens: "사회 전체의 영향과 대응을 함께 봐야 해요",
     description:
-      "24~26세 IT 스타트업 주니어 톤. 트위터·레딧·영어 매체로 빠르게 정보를 챙긴다. 흥분하지 않고 시큰둥하게, 패턴화로 짧게 풀어주는 무심한 정보 동료 포지션.",
-    emoji: "💼",
-    gradient: "from-violet-500 via-indigo-500 to-blue-500",
-    tone: "스마트",
+      "신중하고 균형 잡힌 정책·공공 관점 해설자. 가계 영향, 산업 비용, 정책 대응을 함께 짚어준다.",
+    tone: "공공",
+    emoji: "🏛️",
+    gradient: "from-slate-500 via-blue-500 to-indigo-500",
+    signaturePhrases: [
+      "이 사안은 가계 부담만의 문제가 아닙니다",
+      "여러 이해관계가 함께 얽혀 있습니다",
+    ],
   },
 ];
 
 export function getCharacter(id: CharacterId): Character {
   return CHARACTERS.find((c) => c.id === id) ?? CHARACTERS[0];
+}
+
+export function otherCharacters(id: CharacterId): Character[] {
+  return CHARACTERS.filter((c) => c.id !== id);
 }

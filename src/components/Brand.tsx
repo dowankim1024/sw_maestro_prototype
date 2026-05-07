@@ -1,20 +1,14 @@
-export function Brand({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const dot =
-    size === "lg" ? "h-3 w-3" : size === "sm" ? "h-1.5 w-1.5" : "h-2 w-2";
-  const text =
-    size === "lg" ? "text-2xl" : size === "sm" ? "text-sm" : "text-base";
+export function Brand({ size = "md" }: { size?: "sm" | "md" }) {
+  const text = size === "sm" ? "text-base" : "text-lg";
   return (
-    <div className="flex items-center gap-2">
+    <span className={`flex items-center gap-2 font-bold tracking-tight ${text}`}>
       <span
-        className={`live-dot inline-block rounded-full bg-[var(--accent)] ${dot}`}
         aria-hidden
-      />
-      <span
-        className={`font-semibold tracking-tight text-white ${text}`}
-        style={{ letterSpacing: "-0.01em" }}
+        className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-white shadow-sm"
       >
-        Trend<span className="text-[var(--accent)]">Arena</span>
+        <span className="text-[13px] font-black">IC</span>
       </span>
-    </div>
+      <span className="text-[var(--foreground)]">이슈캐스트</span>
+    </span>
   );
 }

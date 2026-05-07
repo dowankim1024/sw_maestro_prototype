@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,9 +13,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TrendArena · 실시간 이슈와 AI 토론",
+  title: "이슈캐스트 · 같은 이슈를 4명의 시각으로 30초 안에",
   description:
-    "지금 뜨는 이슈를 한눈에 보고, AI와 1:1 토론으로 내 논리력을 검증하는 실시간 트렌드·토론 플랫폼",
+    "오늘의 시사 이슈를 깡깡녀·옆집 아재·교수님·국무총리, 4명의 캐릭터 시각으로 30초 안에 가볍게 이해하는 모바일 이슈 앱.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#f8f6f1",
 };
 
 export default function RootLayout({
@@ -28,7 +35,7 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
+      <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         {children}
       </body>
     </html>

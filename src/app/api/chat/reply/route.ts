@@ -1,13 +1,18 @@
 import { getCharacter } from "@/lib/characters";
 import { buildSystemPrompt } from "@/lib/prompts";
-import type { CharacterId, ChatTurn, Mood, TrendIssue } from "@/lib/types";
+import { factLabelText } from "@/lib/services";
+import type {
+  CharacterId,
+  ChatTurn,
+  Issue,
+} from "@/lib/types";
 
 interface ChatReplyRequest {
-  issue: TrendIssue;
+  issue: Issue;
   characterId: CharacterId;
   userText: string;
   history: ChatTurn[];
-  moodHint?: Mood;
+  closingHint?: boolean;
 }
 
 interface GeminiResponse {
@@ -24,18 +29,19 @@ export async function POST(req: Request) {
   try {
     const body = (await req.json()) as ChatReplyRequest;
     requestCharacterId = body.characterId;
+
     const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-pro";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
     if (!apiKey) {
       return Response.json({
-        text: fallbackReply(body.characterId),
+        text: fallbackReply(body),
         degraded: true,
         reason: "missing_api_key",
       });
     }
 
-    const systemInstruction = buildSystemInstruction(body.characterId);
+    const systemInstruction = buildSystemPrompt(body.characterId);
     const prompt = buildUserPrompt(body);
 
     const first = await callGemini({
@@ -46,7 +52,7 @@ export async function POST(req: Request) {
     });
     if (!first.ok) {
       return Response.json({
-        text: fallbackReply(body.characterId),
+        text: fallbackReply(body),
         degraded: true,
         reason: "request_failed",
         detail: first.error,
@@ -56,7 +62,6 @@ export async function POST(req: Request) {
     let text = extractGeminiText(first.data);
     let finishReason = first.data.candidates?.[0]?.finishReason ?? "";
 
-    // 중간 잘림 방지: MAX_TOKENS 또는 미완성 문장처럼 보이면 한 번 재생성
     if (needsRetry(text, finishReason)) {
       const retry = await callGemini({
         apiKey,
@@ -64,7 +69,7 @@ export async function POST(req: Request) {
         systemInstruction,
         prompt:
           prompt +
-          "\n\n[추가 지시]\n- 직전 답변처럼 중간에 끊기지 말고 완결된 문장으로 마무리하세요.\n- JSON 형식이 아니라 자연스러운 채팅 문장만 출력하세요.",
+          "\n\n[추가 지시]\n- 직전 답변처럼 중간에 끊기지 말고 완결된 문장으로 마무리하세요.\n- 자연스러운 채팅 메시지로만 출력하세요. JSON, 마크다운, 헤더 금지.",
       });
       if (retry.ok) {
         const retried = extractGeminiText(retry.data);
@@ -76,38 +81,38 @@ export async function POST(req: Request) {
       }
     }
 
-    if (!text || text.length < 16 || looksTruncated(text)) {
+    if (!text || text.length < 12 || looksTruncated(text)) {
       const salvaged = salvageCompleteText(text);
-      if (salvaged.length >= 16) {
+      if (salvaged.length >= 12) {
         return Response.json({
           text: salvaged,
           finishReason,
           degraded: true,
+          reason: "truncated",
         });
       }
-
-      return Response.json(
-        {
-          text: fallbackReply(body.characterId),
-          degraded: true,
-          reason: "incomplete_response",
-          finishReason,
-        },
-      );
+      return Response.json({
+        text: fallbackReply(body),
+        degraded: true,
+        reason: "incomplete_response",
+        finishReason,
+      });
     }
 
     return Response.json({ text, finishReason });
   } catch (error) {
-    return Response.json(
-      {
-        text: fallbackReply(requestCharacterId),
-        degraded: true,
-        reason: "server_exception",
-        detail: error instanceof Error ? error.message : "Unknown error",
-      },
-    );
+    return Response.json({
+      text: characterFallback(requestCharacterId),
+      degraded: true,
+      reason: "server_exception",
+      detail: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }
+
+// ---------------------------------------------------------------------------
+// Gemini call
+// ---------------------------------------------------------------------------
 
 async function callGemini(args: {
   apiKey: string;
@@ -121,19 +126,12 @@ async function callGemini(args: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: args.systemInstruction }],
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: args.prompt }],
-          },
-        ],
+        systemInstruction: { parts: [{ text: args.systemInstruction }] },
+        contents: [{ role: "user", parts: [{ text: args.prompt }] }],
         generationConfig: {
           temperature: 0.85,
           topP: 0.95,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 800,
         },
       }),
     },
@@ -143,24 +141,17 @@ async function callGemini(args: {
     const errorBody = await response.text();
     return { ok: false, error: errorBody };
   }
-
   return { ok: true, data: (await response.json()) as GeminiResponse };
 }
 
-/**
- * BASE 프롬프트(prompt/base_prompt.md)와 페르소나 프롬프트(prompt/character_*.md)를
- * 조립한 시스템 명령. 캐릭터별 분기는 src/lib/prompts.ts 가 책임진다.
- */
-function buildSystemInstruction(characterId: CharacterId): string {
-  return buildSystemPrompt(characterId);
-}
+// ---------------------------------------------------------------------------
+// Prompt assembly
+// ---------------------------------------------------------------------------
 
-/**
- * 베이스 §"컨텍스트 입력 형식" 에 맞춘 사용자 프롬프트.
- * 한 턴마다 이슈 정보·핵심 포인트·관련 키워드·대화 히스토리·사용자 직전 발언을 함께 전달한다.
- */
 function buildUserPrompt(input: ChatReplyRequest): string {
   const character = getCharacter(input.characterId);
+  const issue = input.issue;
+
   const safeHistory = input.history.slice(-6).map((turn) => {
     const who =
       turn.role === "user"
@@ -171,38 +162,66 @@ function buildUserPrompt(input: ChatReplyRequest): string {
     return `${who}: ${turn.text}`;
   });
 
-  const keyPoints = (input.issue.keyPoints ?? []).slice(0, 3);
-  const keywords = (input.issue.keywords ?? []).join(", ");
-  const moodHint = input.moodHint ? `응답 결 힌트: ${input.moodHint}` : "";
+  const facts = issue.facts.map((f, i) => {
+    const sources = issue.sources
+      .filter((s) => f.sourceIds.includes(s.id))
+      .map((s) => `${s.publisher}`)
+      .join(", ");
+    return `  ${i + 1}. [${factLabelText(f.confidence)}] ${f.statement}${sources ? ` (출처: ${sources})` : ""}`;
+  });
+
+  const angle = issue.characterAngles.find(
+    (a) => a.characterId === input.characterId,
+  );
 
   return [
-    "[이슈 정보]",
-    `- 제목: ${input.issue.title}`,
-    `- 한 줄: ${input.issue.oneLine}`,
-    `- 요약: ${input.issue.summary}`,
-    `- 왜 뜨는지: ${input.issue.whyTrending}`,
-    keyPoints.length > 0 ? `- 핵심 포인트:\n  · ${keyPoints.join("\n  · ")}` : "",
-    keywords ? `- 관련 키워드: ${keywords}` : "",
-    moodHint,
+    "[이슈]",
+    `- 제목: ${issue.title}`,
+    `- 한 줄 요약: ${issue.summary}`,
+    `- 왜 지금 뜨는지: ${issue.whyNow}`,
+    `- 카테고리: ${issue.category}`,
+    `- 위험도: ${issue.safetyLevel}`,
+    `- 키워드: ${issue.keywords.join(", ")}`,
     "",
+    "[핵심 사실]",
+    facts.length > 0 ? facts.join("\n") : "  (제공된 사실 없음)",
+    "",
+    angle
+      ? [
+          "[이 캐릭터의 기본 시각]",
+          `- 라벨: ${angle.lensLabel}`,
+          `- 한 줄: ${angle.oneLiner}`,
+          `- 톤 지문: ${angle.viewpoint}`,
+          `- 의견 면책: ${angle.opinionDisclaimer}`,
+          "",
+        ].join("\n")
+      : "",
     "[대화 히스토리]",
     safeHistory.length > 0 ? safeHistory.join("\n") : "(아직 없음)",
     "",
     `[사용자 직전 발언]\n${input.userText}`,
     "",
     "[지시]",
-    "- 위 BASE 프롬프트와 캐릭터 프롬프트의 톤·규칙을 따라 한 턴만 답변하세요.",
-    "- 한 발언당 3~4줄 이내. 마크다운·번호·굵은 글씨 금지.",
-    "- 다음 턴으로 이어질 흥미 고리(질문·의외의 사실·비교 지점)를 자연스럽게 남기세요.",
+    "- 위 BASE + 캐릭터 프롬프트 톤·규칙을 따라 한 턴만 답하세요.",
+    "- 한 발언당 3~4줄. 마크다운·번호·헤더 금지.",
+    "- 위 ‘핵심 사실’에 없는 새 수치, 인명, 사건은 만들지 마세요.",
+    "- 사실과 캐릭터 의견을 섞지 마세요. 의견은 ‘제 생각엔’ 같은 표지로 드러내세요.",
+    input.closingHint
+      ? "- 사용자가 마무리 신호를 보냈습니다. 캐릭터 톤으로 가벼운 마무리만 하고 별도 정리는 하지 마세요."
+      : "- 다음 턴으로 이어지는 흥미 고리(다음 개념, 비교 지점)를 자연스럽게 남기세요.",
   ]
     .filter(Boolean)
     .join("\n");
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function extractGeminiText(data: GeminiResponse): string {
   const parts = data.candidates?.[0]?.content?.parts ?? [];
   return parts
-    .map((part) => part.text?.trim() ?? "")
+    .map((p) => p.text?.trim() ?? "")
     .filter(Boolean)
     .join("\n")
     .trim();
@@ -237,24 +256,42 @@ function salvageCompleteText(text: string): string {
   }
   const lines = trimmed
     .split("\n")
-    .map((line) => line.trim())
+    .map((l) => l.trim())
     .filter(Boolean);
-  if (lines.length >= 2) {
-    return lines.slice(0, 2).join("\n").trim();
-  }
+  if (lines.length >= 2) return lines.slice(0, 2).join("\n").trim();
   return "";
 }
 
-function fallbackReply(characterId: CharacterId): string {
-  switch (characterId) {
+function fallbackReply(body: ChatReplyRequest): string {
+  if (body.closingHint) {
+    return characterFallback(body.characterId, true);
+  }
+  return characterFallback(body.characterId);
+}
+
+function characterFallback(id: CharacterId, closing = false): string {
+  if (closing) {
+    switch (id) {
+      case "kkang":
+        return "오케이 오늘 여기까지~ 또 궁금한 거 생기면 들고 와 ㅋㅋ";
+      case "uncle":
+        return "그래, 오늘 얘기 좋았어. 다음에 또 한 번 같이 짚어보자고~";
+      case "prof":
+        return "오늘 함께 짚어주셔서 고맙습니다... 좋은 호기심이셨어요.";
+      case "pm":
+      default:
+        return "오늘 말씀 감사합니다. 함께 짚은 시각이 의미가 있었습니다.";
+    }
+  }
+  switch (id) {
     case "kkang":
-      return "아 잠깐만 ㅠㅠ 내가 말이 꼬였네 ㅋㅋ 핵심만 다시 말하면, 이거 사람마다 체감이 달라서 관점이 갈리는 거 같아~ 너는 어디가 제일 걸려??";
+      return "어… 잠깐 답변이 좀 흐려졌네 ㅋㅋ 핵심만 다시 말하면 결국 ‘내 생활에 어떻게 닿느냐’가 포인트야. 너는 어디가 제일 걸려??";
     case "uncle":
-      return "어어 잠깐~ 내가 말이 좀 헷갈렸네~ 핵심만 다시 보면 이 이슈는 결이 두 갈래거든. 자네는 어느 쪽이 더 와닿어?";
+      return "아니 그게 말이야~ 잠깐 끊겼네. 결국 이건 분위기랑 같이 움직이는 얘기거든. 자네는 어느 결이 더 와닿어?";
     case "prof":
-      return "음... 방금 문장이 매끄럽지 않았네요... 다시 정리해 보면, 이 이슈는 한 가지 결로만 보긴 어려운 부분이 있어요. 가장 먼저 걸리는 지점이 어디일까요?";
+      return "음... 답변이 매끄럽지 못했네요... 핵심은 사실과 시장 심리가 함께 작동한다는 점이에요. 어디가 더 궁금하세요?";
     case "pm":
     default:
-      return "어... 방금 답변이 좀 흐려졌네요 ㅋㅋ 결국 두 가지 결이 있는 이슈인데, 어느 쪽부터 정리해드리면 될까요?";
+      return "이 사안은 단순히 한 줄로 정리하기 어렵습니다. 핵심은 가계 영향과 정책 대응을 함께 살펴봐야 한다는 점입니다.";
   }
 }
