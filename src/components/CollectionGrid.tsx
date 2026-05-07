@@ -14,7 +14,7 @@ interface Props {
 type Filter = "all" | CharacterId;
 
 /**
- * 06 §15.5 — 카드 컬렉션.
+ * 카드 컬렉션.
  * 점수·등급 표현 없이 ‘누적된 관점’을 보여주는 데 집중한다.
  */
 export function CollectionGrid({ cards, onOpen, onClear, onDelete }: Props) {

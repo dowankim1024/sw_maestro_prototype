@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "이슈캐스트 · 같은 이슈를 4명의 시각으로 30초 안에",
   description:
-    "오늘의 시사 이슈를 깡깡녀·옆집 아재·교수님·국무총리, 4명의 캐릭터 시각으로 30초 안에 가볍게 이해하는 모바일 이슈 앱.",
+    "오늘의 시사·트렌드 이슈를 민철·수진 교수·지오·도윤, 4가지 렌즈로 30초 안에 가볍게 이해하는 모바일 이슈 앱.",
 };
 
 export const viewport: Viewport = {

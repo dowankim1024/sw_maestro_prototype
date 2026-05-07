@@ -462,15 +462,6 @@ function FactsPanel({
       className="relative w-screen shrink-0 snap-start overflow-hidden bg-[#16171c]"
       style={{ height: "100dvh" }}
     >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-[var(--accent)]/15 blur-3xl"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-16 bottom-0 h-72 w-72 rounded-full bg-[var(--accent-2)]/12 blur-3xl"
-      />
-
       <div className="no-scrollbar relative flex h-full w-full flex-col gap-4 overflow-y-auto p-6 pb-24 text-white sm:p-10 sm:pb-28">
         <header>
           <p className="text-[11px] font-semibold uppercase tracking-widest text-white/70">

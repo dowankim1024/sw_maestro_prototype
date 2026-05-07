@@ -65,14 +65,16 @@ export default function Page() {
   // 초기 로딩
   useEffect(() => {
     let active = true;
-    setLoading(true);
     fetchTodayIssues().then((data) => {
       if (!active) return;
       setIssues(data);
       setLoading(false);
     });
-    setCards(loadInsightCards());
-    setSeenIssueIds(loadSeenIssues());
+    queueMicrotask(() => {
+      if (!active) return;
+      setCards(loadInsightCards());
+      setSeenIssueIds(loadSeenIssues());
+    });
     return () => {
       active = false;
     };
@@ -413,10 +415,6 @@ function Hero({
 }) {
   return (
     <section className="relative overflow-hidden rounded-3xl border border-[var(--border)] bg-gradient-to-br from-white via-[#fdfaf3] to-[var(--accent-soft)] p-6 sm:p-8">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-gradient-to-br from-[var(--accent)]/30 to-[var(--accent-2)]/20 blur-3xl"
-      />
       <span className="snack-30">⏱ 30초 스낵 컬처</span>
       <h1 className="mt-3 text-2xl font-extrabold leading-tight text-[var(--foreground)] sm:text-4xl">
         오늘 사람들이 말할 이슈,
@@ -426,7 +424,7 @@ function Hero({
         </span>
       </h1>
       <p className="mt-3 max-w-xl text-[14px] leading-relaxed text-[var(--muted)]">
-        깡깡녀·옆집 아재·교수님·국무총리. 같은 이슈를 캐릭터 시각으로 빠르게 짚어보고, 더 궁금하면 그 캐릭터와 이어서 대화해요. 점수도, 댓글 싸움도, 토론도 없어요.
+        민철·수진 교수·지오·도윤. 같은 이슈를 생활자, 전문가, 트렌드, 회의주의자 렌즈로 빠르게 짚어보고, 더 궁금하면 그 캐릭터와 이어서 대화해요. 점수도, 댓글 싸움도, 찬반 싸움도 없어요.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button

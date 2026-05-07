@@ -8,7 +8,7 @@ interface Props {
 }
 
 /**
- * 06 §11.4 — 면책 고지.
+ * 면책 고지.
  * 캐릭터 발언이 단정이 아니라는 점, 사실은 출처 기준이라는 점을 강조한다.
  */
 export function DisclaimerNotice({ issue, size = "md", className = "" }: Props) {

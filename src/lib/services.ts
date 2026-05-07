@@ -1,7 +1,7 @@
 /**
  * 이슈캐스트 서비스 레이어.
  *
- * 06-prototype.md §13 (LLM 호출 유형) 기준으로 다음 세 가지를 다룬다.
+ * refactor 문서의 제품 구조 기준으로 다음 세 가지를 다룬다.
  *  1. 이슈 피드 / 상세 조회
  *  2. 캐릭터와의 이어지는 대화 (POST /api/chat/reply)
  *  3. 대화 종료 후 ‘오늘 새로 본 것’ 카드 생성 (POST /api/chat/insight)
@@ -29,7 +29,7 @@ import type {
 
 /**
  * 오늘의 이슈 피드.
- * 정책: 카테고리 비율은 06 §17.1 기준이지만 MVP에서는 mock 6건을
+ * 정책: MVP에서는 mock 6건을
  * publishedAt 내림차순으로 단순 정렬해서 노출한다.
  */
 export async function fetchTodayIssues(): Promise<Issue[]> {
@@ -81,19 +81,25 @@ export function getRecommendedNextCharacter(args: {
   issue: Issue;
   currentCharacterId: CharacterId;
 }): Character {
+  const angleIds = args.issue.characterAngles.map((a) => a.characterId);
+  const currentIndex = angleIds.indexOf(args.currentCharacterId);
+  if (currentIndex >= 0 && angleIds.length > 1) {
+    const nextId = angleIds[(currentIndex + 1) % angleIds.length];
+    if (nextId !== args.currentCharacterId) return getCharacter(nextId);
+  }
+
   const others = otherCharacters(args.currentCharacterId);
-  // 가능한 한 issue.characterAngles 안에 있는 캐릭터를 우선 추천
-  const withAngle = others.find((c) =>
-    args.issue.characterAngles.some((a) => a.characterId === c.id),
+  return (
+    others.find((c) => args.issue.characterAngles.some((a) => a.characterId === c.id)) ??
+    others[0]
   );
-  return withAngle ?? others[0];
 }
 
 // ---------------------------------------------------------------------------
 // DISCLAIMER
 // ---------------------------------------------------------------------------
 
-/** 06 §11.4 — 면책 고지. safetyLevel 별로 강도가 다르다. */
+/** 면책 고지. safetyLevel 별로 강도가 다르다. */
 export function disclaimerFor(issue: Issue): string {
   switch (issue.safetyLevel) {
     case "highRisk":
@@ -180,14 +186,14 @@ function localFallbackReply(
   if (closing) {
     switch (characterId) {
       case "kkang":
-        return "아 오늘 얘기 좋았어 ㅋㅋ 또 궁금한 거 생기면 들고 와~";
+        return "그래, 오늘은 여기까지 하자. 이 정도면 생활에 닿는 지점은 잡은 거야.";
       case "uncle":
-        return "재밌었어~ 다음에 또 한 번 같이 짚어 보자고~";
+        return "좋은 질문이었어요. 여기까지 짚어도 오늘 새로 본 관점은 충분히 생긴 것 같네요.";
       case "prof":
-        return "오늘 함께 짚어주셔서 고마워요... 좋은 호기심이셨어요.";
+        return "오케이, 여기까지! 오늘 이슈 vibe는 꽤 잡힌 것 같아.";
       case "pm":
       default:
-        return "오늘 말씀 감사합니다. 함께 짚은 시각이 의미가 있었습니다.";
+        return "좋아, 일단 여기까지 보자. 더 단정하기보다 이 정도로 정리하는 게 맞겠다.";
     }
   }
 
@@ -195,14 +201,14 @@ function localFallbackReply(
 
   switch (characterId) {
     case "kkang":
-      return `어 잠깐, 핵심만 다시 말하면 ${oneLiner} 결국 그런 얘기야 ㅋㅋ ${factSnippet} 너는 이 부분 어디가 제일 걸려??`;
+      return `솔직히 내가 봤을 땐 ${oneLiner} 이 얘기야. ${factSnippet} 결국 생활로 오면 돈이든 시간이든 어디선가 티가 나거든. 너한테는 어디가 제일 바로 닿아?`;
     case "uncle":
-      return `아니 그게 말이야~ ${oneLiner} 결국 분위기랑 같이 가는 얘기거든. ${factSnippet} 자네는 어느 결이 더 와닿어?`;
+      return `흥미로운 게요, ${oneLiner} 라는 관점은 혼자 떨어진 이야기가 아니에요. ${factSnippet} 한 가지 짚고 싶은 건 이 변화가 어떤 구조 안에서 움직이는지를 같이 봐야 한다는 점이에요.`;
     case "prof":
-      return `음... 정리하면 ${oneLiner} 정도가 핵심이에요. ${factSnippet} 한 단계 더 들어가면 ‘기대 심리’가 함께 작동한다는 점이 있죠. 어떤 결이 더 궁금하세요?`;
+      return `이거 지금 반응으로 보면 ${oneLiner} 쪽으로 이미 얘기가 돌고 있어. ${factSnippet} 근데 사람들이 소비하는 톤이랑 실제 사실은 좀 나눠봐야 해.`;
     case "pm":
     default:
-      return `이 사안은 단순한 한 줄로 정리하기는 어렵습니다. 핵심은 ${oneLiner} 라는 점이에요. ${factSnippet} 어떤 측면을 더 살펴봤으면 하나요? — ${character.name}`;
+      return `잠깐, 근데 ${oneLiner} 라고만 보기엔 좀 더 봐야 돼. ${factSnippet} 다른 가능성도 있어서, 출처에 나온 것과 해석을 나눠 보는 게 좋아. — ${character.name}`;
   }
 }
 
@@ -336,14 +342,14 @@ function nextCuriosity(issue: Issue): string {
 function characterDefaultQuote(id: CharacterId): string {
   switch (id) {
     case "kkang":
-      return "이거 결국 내 지갑 얘기더라 ㅋㅋ";
+      return "결국 생활에 닿는 얘기였어";
     case "uncle":
-      return "분위기랑 같이 움직이는 얘기더라고";
+      return "구조를 같이 봐야 보이는 이슈예요";
     case "prof":
-      return "기대 심리가 가격에 먼저 반영되는 구조였어요";
+      return "사람들이 소비하는 톤이 포인트였어";
     case "pm":
     default:
-      return "여러 이해관계가 함께 얽힌 사안이었습니다";
+      return "출처와 해석을 나눠 봐야 돼";
   }
 }
 

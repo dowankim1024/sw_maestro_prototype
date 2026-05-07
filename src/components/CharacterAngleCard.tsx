@@ -12,7 +12,7 @@ interface Props {
 
 /**
  * 같은 이슈를 캐릭터별 시각으로 보여주는 30초 카드.
- * 06 §16.4 의 캐릭터 관점 카드 정의를 그대로 반영.
+ * 캐릭터 관점 카드.
  */
 export function CharacterAngleCard({ issue, angle, onChat, compact = false }: Props) {
   const character = getCharacter(angle.characterId);

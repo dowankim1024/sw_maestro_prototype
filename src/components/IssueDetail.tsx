@@ -16,7 +16,7 @@ interface Props {
 }
 
 /**
- * 06 §16.3 — 이슈 상세 화면.
+ * 이슈 상세 화면.
  * 화면 순서: 제목·요약 → 면책 → 핵심 팩트 → 왜 지금 → 캐릭터별 관점 → 빠른 반응 → 출처
  */
 export function IssueDetail({ issue, onChat, onBack }: Props) {

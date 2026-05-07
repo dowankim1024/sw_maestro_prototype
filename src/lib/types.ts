@@ -1,12 +1,12 @@
 /**
  * 이슈캐스트 데이터 모델 v2.
  *
- * 06-prototype.md (§10, §11) 기준.
+ * refactor 문서의 제품 구조 기준.
  * 핵심 원칙:
  *   - 사실(Fact)과 캐릭터 의견(Angle/Opinion)을 분리한다.
  *   - 모든 이슈에는 최소 2개 이상의 출처가 있어야 한다.
  *   - 위험도(safetyLevel)에 따라 면책 문구 강도를 다르게 한다.
- *   - 점수·등급·랭킹·찬반 토론 필드는 두지 않는다.
+ *   - 점수·등급·랭킹·찬반 대립 필드는 두지 않는다.
  */
 
 // ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ export const CATEGORY_META: Record<IssueCategory, CategoryMeta> = {
 // ---------------------------------------------------------------------------
 
 /**
- * 위험도 분류 (06-prototype.md §12.5).
+ * 위험도 분류.
  *  - normal: 일반 트렌드·생활 이슈
  *  - sensitive: 정치·젠더·종교·노사 등 사회 갈등 이슈
  *  - highRisk: 명예훼손·수사·재판·의료/금융 위험 이슈 (MVP 발행 보류)
@@ -76,7 +76,7 @@ export interface Source {
 // FACT
 // ---------------------------------------------------------------------------
 
-/** 사실 라벨 (06 §11.3). UI 라벨용 키. */
+/** 사실 라벨. UI 라벨용 키. */
 export type FactLabel = "fact" | "reported" | "uncertain";
 
 export interface IssueFact {
@@ -97,17 +97,18 @@ export interface IssueFact {
 /**
  * 캐릭터 ID.
  * 호환성을 위해 기존 storage 키(`kkang`/`uncle`/`prof`/`pm`)를 유지하되,
- * 의미는 06-prototype.md §9.2 기준으로 재정의한다.
- *  - kkang  → 깡깡녀 (생활 체감형 친구)
- *  - uncle  → 옆집 아재 (경험담 기반 현실 해설자)
- *  - prof   → 교수님 (개념 정리형 설명자)
- *  - pm     → 국무총리 (정책·공공 관점 해설자)
+ * 의미는 refactor/01_product_structure.md 와
+ * refactor/02_character_persona_prompts.md 기준으로 재정의한다.
+ *  - kkang  → 민철 (생활자 렌즈)
+ *  - uncle  → 수진 교수 (전문가 렌즈)
+ *  - prof   → 지오 (트렌드 렌즈)
+ *  - pm     → 도윤 (회의주의자 렌즈)
  */
 export type CharacterId = "kkang" | "uncle" | "prof" | "pm";
 
 export const CHARACTER_IDS: CharacterId[] = ["kkang", "uncle", "prof", "pm"];
 
-export type CharacterTone = "트렌드" | "냉소" | "꼰대" | "공감";
+export type CharacterTone = "생활자" | "전문가" | "트렌드" | "회의주의";
 
 export interface Character {
   id: CharacterId;
@@ -132,7 +133,7 @@ export interface Character {
 
 /**
  * 같은 이슈를 캐릭터별로 어떻게 보는가.
- * 06-prototype.md §10.4. 캐릭터 의견은 `referencedFactIds`로 항상 사실에 연결된다.
+ * 캐릭터 의견은 `referencedFactIds`로 항상 사실에 연결된다.
  */
 export interface CharacterAngle {
   characterId: CharacterId;
@@ -183,7 +184,7 @@ export interface Issue {
 }
 
 // ---------------------------------------------------------------------------
-// REACTION (06 §14.2)
+// REACTION
 // ---------------------------------------------------------------------------
 
 export type ReactionKind =

@@ -13,7 +13,7 @@ interface Props {
 }
 
 /**
- * 06 §16.6 — ‘오늘 새로 본 것’ 카드.
+ * ‘오늘 새로 본 것’ 카드.
  *  - 헤드라인을 가장 크게
  *  - keyTakeaways 3개를 카드로 분리
  *  - userInsight 인용구
@@ -64,10 +64,6 @@ export function InsightCardView({
       <article
         className={`relative overflow-hidden rounded-3xl border border-[var(--border)] p-6 sm:p-8 ${character.gradient.includes("rose") ? "bg-gradient-to-br from-rose-50 via-white to-orange-50" : ""}`}
       >
-        <div
-          aria-hidden
-          className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-to-br opacity-30 ${character.gradient}`}
-        />
         <div className="relative flex items-center gap-3">
           <span
             aria-hidden

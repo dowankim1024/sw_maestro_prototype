@@ -9,7 +9,7 @@ interface Props {
 }
 
 /**
- * 06 §16.5 — 추천 질문 칩.
+ * 추천 질문 칩.
  * 사용자가 직접 질문하지 못해도 시작할 수 있도록 진입 질문을 칩으로 노출.
  */
 export function SuggestedQuestionChips({

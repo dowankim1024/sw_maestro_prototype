@@ -256,13 +256,13 @@ function shortHeadline(title: string): string {
 function characterDefaultQuote(id: CharacterId): string {
   switch (id) {
     case "kkang":
-      return "이거 결국 내 지갑 얘기더라 ㅋㅋ";
+      return "결국 생활에 닿는 얘기였어";
     case "uncle":
-      return "분위기랑 같이 움직이는 얘기더라고";
+      return "구조를 같이 봐야 보이는 이슈예요";
     case "prof":
-      return "기대 심리가 가격에 먼저 반영되는 구조였어요";
+      return "사람들이 소비하는 톤이 포인트였어";
     case "pm":
     default:
-      return "여러 이해관계가 함께 얽힌 사안이었습니다";
+      return "출처와 해석을 나눠 봐야 돼";
   }
 }

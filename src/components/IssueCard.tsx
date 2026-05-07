@@ -11,7 +11,7 @@ interface Props {
 }
 
 /**
- * 06 §16.2 — 홈/피드 카드.
+ * 홈/피드 카드.
  * 자극적이지 않은 톤. 30초·출처 수·캐릭터 4명 미리보기를 포함한다.
  */
 export function IssueCard({ issue, onOpen, seen = false, size = "full" }: Props) {

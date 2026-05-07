@@ -34,7 +34,7 @@ const DEFAULT_KINDS: ReactionKind[] = [
 ];
 
 /**
- * 06 §14.2 — 자유 텍스트 댓글 대신 빠른 반응 버튼.
+ * 자유 텍스트 댓글 대신 빠른 반응 버튼.
  * 단순 토글 저장 (localStorage).
  */
 export function ReactionButtons({
@@ -47,8 +47,15 @@ export function ReactionButtons({
   const [active, setActive] = useState<Set<ReactionKind>>(new Set());
 
   useEffect(() => {
-    const list = loadReactions();
-    setActive(reactionsFor({ issueId, characterId, reactions: list }));
+    let mounted = true;
+    queueMicrotask(() => {
+      if (!mounted) return;
+      const list = loadReactions();
+      setActive(reactionsFor({ issueId, characterId, reactions: list }));
+    });
+    return () => {
+      mounted = false;
+    };
   }, [issueId, characterId]);
 
   const onClick = (kind: ReactionKind) => {
