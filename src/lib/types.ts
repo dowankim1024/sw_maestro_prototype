@@ -107,7 +107,7 @@ export type CharacterId = "kkang" | "uncle" | "prof" | "pm";
 
 export const CHARACTER_IDS: CharacterId[] = ["kkang", "uncle", "prof", "pm"];
 
-export type CharacterTone = "생활" | "현실" | "개념" | "공공";
+export type CharacterTone = "트렌드" | "냉소" | "꼰대" | "공감";
 
 export interface Character {
   id: CharacterId;

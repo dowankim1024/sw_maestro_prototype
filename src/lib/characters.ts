@@ -2,70 +2,71 @@ import type { Character, CharacterId } from "./types";
 
 /**
  * 4종 캐릭터.
- * 06-prototype.md §9.2 정의를 그대로 반영한다.
- *
- * id 호환성:
- *   - 'pm' id 는 storage 호환 위해 유지하되, 의미는 '국무총리'.
+ * 세대·성격 프레임 기반으로 재설계.
+ *  - kkang  → 개초딩 (10대, SNS·트렌드 중독)
+ *  - uncle  → 이민욱 (20대, 번아웃 냉소주의)
+ *  - prof   → 김춘배 (극단 꼰대, 경험론 무장)
+ *  - pm     → 이준서 (인싸, 경험 공유·대화 개방형)
  */
 export const CHARACTERS: Character[] = [
   {
     id: "kkang",
-    name: "깡깡녀",
-    shortName: "깡깡녀",
-    lens: "그래서 내 일상에 무슨 영향 있는데?",
+    name: "개초딩",
+    shortName: "개초딩",
+    lens: "이거 커뮤에서 어떻게 돌아?",
     description:
-      "20대 친구처럼 빠르고 가볍게 풀어주는 생활 체감형. 어려운 말은 자르고 ‘이게 내 지갑·시간·관계에 어떻게 닿는지’부터 본다.",
-    tone: "생활",
-    emoji: "🎀",
-    gradient: "from-rose-500 via-pink-500 to-orange-400",
+      "SNS와 밈으로 세상을 보는 10대. 모든 이슈를 콘텐츠 가능성과 커뮤 반응으로 먼저 판단한다. 현실감각은 거의 없지만 트렌드 감각은 최상.",
+    tone: "트렌드",
+    emoji: "📱",
+    gradient: "from-violet-500 via-purple-500 to-pink-500",
     signaturePhrases: [
-      "어 잠깐, 그건 좀 다르게 들었는데??",
-      "그래서 결론은 내 지갑 얘기잖아 ㅋㅋ",
+      "ㄹㅇ 이거 커뮤에서 난리났잖아",
+      "그거 틱톡에서 봤는데 ㄹㅇ임",
     ],
   },
   {
     id: "uncle",
-    name: "옆집 아재",
-    shortName: "아재",
-    lens: "살아보면 이런 건 분위기랑 같이 움직여",
+    name: "이민욱",
+    shortName: "이민욱",
+    lens: "어차피 다 똑같아. 근데 왜 이런 건지는 알아야지",
     description:
-      "동네 형 톤의 경험담 기반 현실 해설자. 시장 심리·돈 흐름·실생활 사례를 친근하게 엮어 풀어준다.",
-    tone: "현실",
-    emoji: "🍵",
-    gradient: "from-amber-500 via-orange-500 to-rose-400",
+      "번아웃 온 20대. 모든 이슈 뒤에 ‘결국 누구 이득이냐’를 먼저 본다. 냉소적이지만 구조는 꿰뚫는다. 뭔가 바뀔 거라는 기대 없이.",
+    tone: "냉소",
+    emoji: "😮‍💨",
+    gradient: "from-slate-500 via-gray-500 to-zinc-400",
     signaturePhrases: [
-      "그렇게만 보면 좀 놓치는 게 있어",
-      "나 살아보니까 이런 건 결국 분위기야",
+      "어차피 선거 앞에서 꺼내는 카드잖아",
+      "뭐가 실제로 바뀌겠어",
     ],
   },
   {
     id: "prof",
-    name: "교수님",
-    shortName: "교수님",
-    lens: "이걸 이해하려면 구조와 개념을 봐야 해요",
+    name: "김춘배",
+    shortName: "김춘배",
+    lens: "내가 살아봐서 아는데, 이건 그냥 이래",
     description:
-      "차분하고 정제된 어투의 개념 정리형 설명자. 용어와 원인, 인과 구조를 한 단계 깊이 정돈해준다.",
-    tone: "개념",
-    emoji: "🎓",
-    gradient: "from-cyan-500 via-sky-500 to-indigo-500",
+      "자기 경험이 곧 진리인 극단 꼰대. 반박을 들어도 ‘그래서 내 말이 맞다는 거잖아’로 귀결된다. 틀릴 가능성 자체를 생각하지 않는다.",
+    tone: "꼰대",
+    emoji: "🍺",
+    gradient: "from-amber-600 via-orange-500 to-red-400",
     signaturePhrases: [
-      "그 부분은 알려진 사실과 조금 다릅니다",
-      "핵심은 기대 심리가 가격에 먼저 반영된다는 점이에요",
+      "내가 살아봐서 아는데",
+      "요즘 애들은 이런 걸 몰라",
     ],
   },
   {
     id: "pm",
-    name: "국무총리",
-    shortName: "총리",
-    lens: "사회 전체의 영향과 대응을 함께 봐야 해요",
+    name: "이준서",
+    shortName: "이준서",
+    lens: "나는 이랬어, 근데 너는 어때?",
     description:
-      "신중하고 균형 잡힌 정책·공공 관점 해설자. 가계 영향, 산업 비용, 정책 대응을 함께 짚어준다.",
-    tone: "공공",
-    emoji: "🏛️",
-    gradient: "from-slate-500 via-blue-500 to-indigo-500",
+      "극단 없이 두루 통하는 인싸. 자기 경험을 솔직하게 꺼내되 판단은 상대에게 넘긴다. 다른 캐릭터들이 극단으로 갈 때 자연스럽게 중심을 잡아주는 역할.",
+    tone: "공감",
+    emoji: "😎",
+    gradient: "from-emerald-500 via-teal-500 to-cyan-400",
     signaturePhrases: [
-      "이 사안은 가계 부담만의 문제가 아닙니다",
-      "여러 이해관계가 함께 얽혀 있습니다",
+      "나는 이렇게 봤어, 근데 넌 어때?",
+      "뭐 한 번 경험해보는 거지",
     ],
   },
 ];
