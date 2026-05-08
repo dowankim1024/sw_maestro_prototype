@@ -11,6 +11,7 @@
  */
 
 import { getCharacter, otherCharacters } from "./characters";
+import { getClientProvider } from "./llm-client";
 import { getMockIssueById, mockIssues } from "./mock-data";
 import type {
   Character,
@@ -144,6 +145,7 @@ export async function generateCharacterReply(args: {
         userText: args.userText,
         history: args.history.slice(-10),
         closingHint,
+        provider: getClientProvider(),
       }),
     });
 
@@ -234,6 +236,7 @@ export async function buildInsightCard(args: {
         issue: args.issue,
         characterId: args.characterId,
         turns: args.turns,
+        provider: getClientProvider(),
       }),
     });
     if (response.ok) {

@@ -8,6 +8,7 @@ import { CollectionGrid } from "@/components/CollectionGrid";
 import { InsightCardView } from "@/components/InsightCardView";
 import { IssueCard } from "@/components/IssueCard";
 import { IssueDetail } from "@/components/IssueDetail";
+import { LlmProviderToggle } from "@/components/LlmProviderToggle";
 import { ReelsMode } from "@/components/ReelsMode";
 import {
   buildInsightCard,
@@ -263,6 +264,9 @@ function Header({
           <Brand />
         </button>
         <nav className="flex items-center gap-1.5">
+          <div className="hidden sm:block">
+            <LlmProviderToggle />
+          </div>
           <NavButton active={tab === "home"} onClick={onHome} label="오늘의 이슈" />
           <NavButton
             active={tab === "collection"}
@@ -279,6 +283,9 @@ function Header({
             <span className="sm:hidden">릴스</span>
           </button>
         </nav>
+      </div>
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-end px-4 pb-2 sm:hidden">
+        <LlmProviderToggle size="sm" />
       </div>
     </header>
   );

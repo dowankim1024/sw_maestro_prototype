@@ -1,4 +1,9 @@
 import { getCharacter } from "@/lib/characters";
+import {
+  generateText,
+  resolveProvider,
+  type LlmProvider,
+} from "@/lib/llm";
 import { INSIGHT_SYSTEM_PROMPT } from "@/lib/prompts";
 import type {
   CharacterId,
@@ -11,6 +16,8 @@ interface InsightRequest {
   issue: Issue;
   characterId: CharacterId;
   turns: ChatTurn[];
+  /** 선택: 클라이언트가 명시적으로 프로바이더를 지정 */
+  provider?: LlmProvider;
 }
 
 export interface InsightCardPayload {
@@ -24,76 +31,57 @@ export interface InsightCardPayload {
   duration: string;
 }
 
-interface GeminiResponse {
-  candidates?: Array<{
-    finishReason?: string;
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
-}
-
 export async function POST(req: Request) {
   let characterId: CharacterId = "kkang";
   let issueTitle = "오늘의 대화";
+  let provider: LlmProvider = resolveProvider();
   try {
     const body = (await req.json()) as InsightRequest;
     characterId = body.characterId;
     issueTitle = body.issue?.title ?? issueTitle;
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-
-    if (!apiKey) {
-      return Response.json({
-        card: fallbackCard(body),
-        degraded: true,
-        reason: "missing_api_key",
-      });
-    }
+    provider = resolveProvider(body.provider);
 
     const prompt = buildUserPrompt(body);
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: INSIGHT_SYSTEM_PROMPT }] },
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.7,
-            topP: 0.95,
-            maxOutputTokens: 900,
-            responseMimeType: "application/json",
-          },
-        }),
-      },
-    );
+    const result = await generateText({
+      provider,
+      system: INSIGHT_SYSTEM_PROMPT,
+      user: prompt,
+      jsonMode: true,
+      temperature: 0.7,
+      maxOutputTokens: 900,
+    });
 
-    if (!response.ok) {
-      const errorBody = await response.text();
+    if (!result.ok) {
       return Response.json({
         card: fallbackCard(body),
         degraded: true,
-        reason: "request_failed",
-        detail: errorBody,
+        reason:
+          result.error === "missing_api_key"
+            ? "missing_api_key"
+            : "request_failed",
+        detail: result.error,
+        provider: result.provider,
+        model: result.model,
       });
     }
 
-    const data = (await response.json()) as GeminiResponse;
-    const text = extractText(data);
-    const parsed = safeParseCard(text);
-
+    const parsed = safeParseCard(result.text);
     if (!parsed) {
       return Response.json({
         card: fallbackCard(body),
         degraded: true,
         reason: "parse_failed",
+        provider: result.provider,
+        model: result.model,
       });
     }
-    return Response.json({ card: parsed, degraded: false });
+    return Response.json({
+      card: parsed,
+      degraded: false,
+      provider: result.provider,
+      model: result.model,
+    });
   } catch (error) {
     return Response.json({
       card: fallbackCard({
@@ -104,6 +92,7 @@ export async function POST(req: Request) {
       degraded: true,
       reason: "server_exception",
       detail: error instanceof Error ? error.message : "Unknown error",
+      provider,
     });
   }
 }
@@ -154,17 +143,9 @@ function buildUserPrompt(input: InsightRequest): string {
   ].join("\n");
 }
 
-function extractText(data: GeminiResponse): string {
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  return parts
-    .map((p) => p.text?.trim() ?? "")
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-}
-
 function safeParseCard(raw: string): InsightCardPayload | null {
   if (!raw) return null;
+  // OpenAI 호환 응답이 ```json ... ``` 으로 감싸 오는 경우도 방어.
   const stripped = raw
     .replace(/^```(json)?/i, "")
     .replace(/```$/i, "")

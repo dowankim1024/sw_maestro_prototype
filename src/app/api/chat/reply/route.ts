@@ -1,4 +1,9 @@
 import { getCharacter } from "@/lib/characters";
+import {
+  generateText,
+  resolveProvider,
+  type LlmProvider,
+} from "@/lib/llm";
 import { buildSystemPrompt } from "@/lib/prompts";
 import { factLabelText } from "@/lib/services";
 import type {
@@ -13,70 +18,58 @@ interface ChatReplyRequest {
   userText: string;
   history: ChatTurn[];
   closingHint?: boolean;
-}
-
-interface GeminiResponse {
-  candidates?: Array<{
-    finishReason?: string;
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
+  /** 선택: 클라이언트가 명시적으로 프로바이더를 지정 */
+  provider?: LlmProvider;
 }
 
 export async function POST(req: Request) {
   let requestCharacterId: CharacterId = "kkang";
+  let provider: LlmProvider = resolveProvider();
   try {
     const body = (await req.json()) as ChatReplyRequest;
     requestCharacterId = body.characterId;
-
-    const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-
-    if (!apiKey) {
-      return Response.json({
-        text: fallbackReply(body),
-        degraded: true,
-        reason: "missing_api_key",
-      });
-    }
+    provider = resolveProvider(body.provider);
 
     const systemInstruction = buildSystemPrompt(body.characterId);
     const prompt = buildUserPrompt(body);
 
-    const first = await callGemini({
-      apiKey,
-      model,
-      systemInstruction,
-      prompt,
+    const first = await generateText({
+      provider,
+      system: systemInstruction,
+      user: prompt,
+      temperature: 0.85,
+      maxOutputTokens: 800,
     });
+
     if (!first.ok) {
       return Response.json({
         text: fallbackReply(body),
         degraded: true,
-        reason: "request_failed",
+        reason:
+          first.error === "missing_api_key" ? "missing_api_key" : "request_failed",
         detail: first.error,
+        provider: first.provider,
+        model: first.model,
       });
     }
 
-    let text = extractGeminiText(first.data);
-    let finishReason = first.data.candidates?.[0]?.finishReason ?? "";
+    let text = first.text;
+    let finishReason = first.finishReason;
 
     if (needsRetry(text, finishReason)) {
-      const retry = await callGemini({
-        apiKey,
-        model,
-        systemInstruction,
-        prompt:
+      const retry = await generateText({
+        provider,
+        system: systemInstruction,
+        user:
           prompt +
           "\n\n[추가 지시]\n- 직전 답변처럼 중간에 끊기지 말고 완결된 문장으로 마무리하세요.\n- 자연스러운 채팅 메시지로만 출력하세요. JSON, 마크다운, 헤더 금지.",
+        temperature: 0.85,
+        maxOutputTokens: 800,
       });
       if (retry.ok) {
-        const retried = extractGeminiText(retry.data);
-        if (retried.length >= text.length || !looksTruncated(retried)) {
-          text = retried;
-          finishReason =
-            retry.data.candidates?.[0]?.finishReason ?? finishReason;
+        if (retry.text.length >= text.length || !looksTruncated(retry.text)) {
+          text = retry.text;
+          finishReason = retry.finishReason;
         }
       }
     }
@@ -89,6 +82,8 @@ export async function POST(req: Request) {
           finishReason,
           degraded: true,
           reason: "truncated",
+          provider: first.provider,
+          model: first.model,
         });
       }
       return Response.json({
@@ -96,52 +91,26 @@ export async function POST(req: Request) {
         degraded: true,
         reason: "incomplete_response",
         finishReason,
+        provider: first.provider,
+        model: first.model,
       });
     }
 
-    return Response.json({ text, finishReason });
+    return Response.json({
+      text,
+      finishReason,
+      provider: first.provider,
+      model: first.model,
+    });
   } catch (error) {
     return Response.json({
       text: characterFallback(requestCharacterId),
       degraded: true,
       reason: "server_exception",
       detail: error instanceof Error ? error.message : "Unknown error",
+      provider,
     });
   }
-}
-
-// ---------------------------------------------------------------------------
-// Gemini call
-// ---------------------------------------------------------------------------
-
-async function callGemini(args: {
-  apiKey: string;
-  model: string;
-  systemInstruction: string;
-  prompt: string;
-}): Promise<{ ok: true; data: GeminiResponse } | { ok: false; error: string }> {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${args.model}:generateContent?key=${args.apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: args.systemInstruction }] },
-        contents: [{ role: "user", parts: [{ text: args.prompt }] }],
-        generationConfig: {
-          temperature: 0.85,
-          topP: 0.95,
-          maxOutputTokens: 800,
-        },
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    return { ok: false, error: errorBody };
-  }
-  return { ok: true, data: (await response.json()) as GeminiResponse };
 }
 
 // ---------------------------------------------------------------------------
@@ -220,18 +189,9 @@ function buildUserPrompt(input: ChatReplyRequest): string {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function extractGeminiText(data: GeminiResponse): string {
-  const parts = data.candidates?.[0]?.content?.parts ?? [];
-  return parts
-    .map((p) => p.text?.trim() ?? "")
-    .filter(Boolean)
-    .join("\n")
-    .trim();
-}
-
 function needsRetry(text: string, finishReason: string): boolean {
   if (!text) return true;
-  if (finishReason === "MAX_TOKENS") return true;
+  if (finishReason === "length") return true;
   return looksTruncated(text);
 }
 
